@@ -361,8 +361,7 @@ class Conv(ConvolutionalBase, nn_units.NNLayerBase):
 
     def run(self):
         t1 = time.time()
-        retval = super(Conv, self).run()
-        if retval:
+        if retval := super(Conv, self).run():
             return retval
         self.print_debug_data(t1)
 
@@ -384,8 +383,7 @@ class Conv(ConvolutionalBase, nn_units.NNLayerBase):
             self._fill_with_gabor_filters(
                 self.n_kernels, (self.ky, self.kx), stddev)
         else:
-            raise error.BadFormatError(
-                "Invalid filling type: %s" % filling_type)
+            raise error.BadFormatError(f"Invalid filling type: {filling_type}")
 
     def _fill_weights(self):
         """
@@ -538,10 +536,7 @@ class ConvRELU(Conv):
             for x in numpy.nditer(self.output.mem[:, :, :, k],
                                   op_flags=['readwrite']):
                 tmp_val = x + self.bias.mem[k]
-                if tmp_val > 15:
-                    x[...] = tmp_val
-                else:
-                    x[...] = math.log(math.exp(tmp_val) + 1)
+                x[...] = tmp_val if tmp_val > 15 else math.log(math.exp(tmp_val) + 1)
 
 
 class ConvStrictRELU(Conv):

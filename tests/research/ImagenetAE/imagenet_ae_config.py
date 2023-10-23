@@ -36,6 +36,7 @@ under the License.
 """
 
 
+
 import os
 
 from veles.config import root
@@ -213,18 +214,23 @@ root.imagenet_ae.lr_adjuster.bias_lr_parameters = {
 
 imagenet_base_path = root.imagenet_ae.loader.path
 root.imagenet_ae.snapshotter.prefix = (
-    "imagenet_ae_%s" % root.imagenet_ae.loader.year)
+    f"imagenet_ae_{root.imagenet_ae.loader.year}"
+)
 imagenet_data_path = os.path.join(
     imagenet_base_path, str(root.imagenet_ae.loader.year))
 root.imagenet_ae.loader.original_labels_filename = os.path.join(
-    imagenet_data_path, "original_labels_%s_%s.pickle" %
-    (root.imagenet_ae.loader.year, root.imagenet_ae.loader.series))
+    imagenet_data_path,
+    f"original_labels_{root.imagenet_ae.loader.year}_{root.imagenet_ae.loader.series}.pickle",
+)
 root.imagenet_ae.loader.count_samples_filename = os.path.join(
-    imagenet_data_path, "count_samples_%s_%s.json" %
-    (root.imagenet_ae.loader.year, root.imagenet_ae.loader.series))
+    imagenet_data_path,
+    f"count_samples_{root.imagenet_ae.loader.year}_{root.imagenet_ae.loader.series}.json",
+)
 root.imagenet_ae.loader.samples_filename = os.path.join(
-    imagenet_data_path, "original_data_%s_%s.dat" %
-    (root.imagenet_ae.loader.year, root.imagenet_ae.loader.series))
+    imagenet_data_path,
+    f"original_data_{root.imagenet_ae.loader.year}_{root.imagenet_ae.loader.series}.dat",
+)
 root.imagenet_ae.loader.matrixes_filename = os.path.join(
-    imagenet_data_path, "matrixes_%s_%s.pickle" %
-    (root.imagenet_ae.loader.year, root.imagenet_ae.loader.series))
+    imagenet_data_path,
+    f"matrixes_{root.imagenet_ae.loader.year}_{root.imagenet_ae.loader.series}.pickle",
+)

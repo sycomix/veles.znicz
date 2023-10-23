@@ -34,6 +34,7 @@ under the License.
 """
 
 
+
 import datetime
 import pickle
 import sys
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     stats = []
     total = 0
     img_count = 0
-    print("Loading %s..." % sys.argv[1])
+    print(f"Loading {sys.argv[1]}...")
     with open(sys.argv[1], "rb") as fin:
         while True:
             try:

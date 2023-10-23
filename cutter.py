@@ -73,18 +73,29 @@ class CutterBase(Unit):
         self._padding = value
 
     def create_stuff(self, prefix):
-        setattr(self, "_%s_origin" % prefix, (
-            self.padding[0] * self.input.shape[3] * self.input.itemsize,
-            self.padding[1], 0))
+        setattr(
+            self,
+            f"_{prefix}_origin",
+            (
+                self.padding[0] * self.input.shape[3] * self.input.itemsize,
+                self.padding[1],
+                0,
+            ),
+        )
         self._region = (
             self.output_shape[2] * self.output_shape[3] * self.input.itemsize,
             self.output_shape[1], self.input.shape[0])
-        setattr(self, "_%s_row_pitch" % prefix, (
-            self.input.shape[2] * self.input.shape[3] * self.input.itemsize))
-        setattr(self, "_%s_slice_pitch" % prefix,
-                self.input.sample_size * self.input.itemsize)
-        setattr(self, "_%s_slice_height" % prefix,
-                self.input.shape[1])
+        setattr(
+            self,
+            f"_{prefix}_row_pitch",
+            self.input.shape[2] * self.input.shape[3] * self.input.itemsize,
+        )
+        setattr(
+            self,
+            f"_{prefix}_slice_pitch",
+            self.input.sample_size * self.input.itemsize,
+        )
+        setattr(self, f"_{prefix}_slice_height", self.input.shape[1])
 
 
 @implementer(IOpenCLUnit, ICUDAUnit, INumpyUnit)
@@ -215,11 +226,10 @@ class GDCutter(nn_units.GradientDescentBase, CutterBase):
     def ocl_init(self):
         self.sources_["cutter"] = {}
         self.build_program(
-            {}, "%s_%s_%s" %
-            (self.__class__.__name__,
-             "x".join(str(x) for x in self.err_input.shape),
-             "x".join(str(x) for x in self.padding)),
-            dtype=self.err_input.dtype)
+            {},
+            f'{self.__class__.__name__}_{"x".join(str(x) for x in self.err_input.shape)}_{"x".join(str(x) for x in self.padding)}',
+            dtype=self.err_input.dtype,
+        )
         self.assign_kernel("clear_err_input")
         self.set_args(self.err_input)
 
@@ -298,7 +308,7 @@ class Cutter1D(AcceleratedUnit):
         itemsize = self.input.itemsize
         limit = self.input.shape[0] * self.length
 
-        self.build_program({}, "%s" % self.__class__.__name__, dtype=dtype)
+        self.build_program({}, f"{self.__class__.__name__}", dtype=dtype)
         self.assign_kernel("cutter_1d_forward")
 
         self.set_args(
@@ -318,7 +328,7 @@ class Cutter1D(AcceleratedUnit):
     def ocl_init(self):
         dtype = self.input.dtype
 
-        self.build_program({}, "%s" % self.__class__.__name__, dtype=dtype)
+        self.build_program({}, f"{self.__class__.__name__}", dtype=dtype)
         self.assign_kernel("cutter_1d_forward")
 
         self.set_args(

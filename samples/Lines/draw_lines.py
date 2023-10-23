@@ -112,8 +112,7 @@ def draw_vertical_lines(img, thickness, lines_count, clearance, bgr_color):
         x_stop = x_start
         y_start = 0
         y_stop = h - 1
-        draw_line(img, (x_start, y_start), (x_stop, y_stop),
-                  bgr_color, thickness)
+        draw_line(img, (x_stop, y_start), (x_stop, y_stop), bgr_color, thickness)
 
 
 def draw_horizontal_lines(img, thickness, lines_count, clearance, bgr_color):
@@ -126,13 +125,12 @@ def draw_horizontal_lines(img, thickness, lines_count, clearance, bgr_color):
         bgr_color(array): BGR color of line
     """
     h, w, _ = img.shape
+    x_start = 0
     for _ in range(lines_count):
-        x_start = 0
         x_stop = w - 1
         y_start = round(uniform(low=clearance, high=(h - clearance)))
         y_stop = y_start
-        draw_line(img, (x_start, y_start), (x_stop, y_stop),
-                  bgr_color, thickness)
+        draw_line(img, (x_start, y_stop), (x_stop, y_stop), bgr_color, thickness)
 
 
 def draw_tilted_bottom_top_lines(img, thickness, lines_count,

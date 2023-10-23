@@ -48,9 +48,13 @@ import veles.znicz.tests.research.VideoAE.video_ae as video_ae
 class TestVideoAE(StandardTest):
     @classmethod
     def setUpClass(cls):
-        prng.get(2).seed(numpy.fromfile("%s/znicz/tests/research/seed2" %
-                                        root.common.dirs.veles,
-                                        dtype=numpy.uint32, count=1024))
+        prng.get(2).seed(
+            numpy.fromfile(
+                f"{root.common.dirs.veles}/znicz/tests/research/seed2",
+                dtype=numpy.uint32,
+                count=1024,
+            )
+        )
         root.video_ae.update({
             "snapshotter": {"prefix": "video_ae_test"},
             "downloader": {

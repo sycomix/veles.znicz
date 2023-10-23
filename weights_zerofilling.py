@@ -71,8 +71,7 @@ class ZeroFiller(ForwardBase, TriviallyDistributable):
     @grouping.setter
     def grouping(self, value):
         if not isinstance(value, int):
-            raise TypeError(
-                "grouping value must be an integer (got %s)" % type(value))
+            raise TypeError(f"grouping value must be an integer (got {type(value)})")
         if value < 2:
             raise ValueError("grouping value %d is invalid" % value)
         self._grouping = value
@@ -94,8 +93,7 @@ class ZeroFiller(ForwardBase, TriviallyDistributable):
             # TODO(a.kazantsev): add check for transposed weights.
             for kernel in range(self.effective_shape[0]):
                 for chan in range(self.effective_shape[1]):
-                    self.mask[kernel, chan] = not (
-                        kernel % self.grouping == chan % self.grouping)
+                    self.mask[kernel, chan] = kernel % self.grouping != chan % self.grouping
         else:
             assert self.mask.shape == self.effective_shape
 

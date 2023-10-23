@@ -185,8 +185,9 @@ class SimilarWeights2D(Weights2D):
                 self.form_threshold, self.peak_threshold,
                 self.magnitude_threshold))
         self.info("Founf similar kernels: %s", str(sims))
-        siminp = numpy.empty((sum([len(s) for s in sims]), inp.shape[1]),
-                             dtype=inp.dtype)
+        siminp = numpy.empty(
+            (sum(len(s) for s in sims), inp.shape[1]), dtype=inp.dtype
+        )
         counter = 0
         for simset in sims:
             for s in simset:

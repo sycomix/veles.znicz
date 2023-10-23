@@ -114,7 +114,7 @@ class TestPackageExport(StandardTest):
                              All2AllSoftmax.__id__)
             for unit in contents["units"]:
                 for attr in ("bias", "weights"):
-                    self.assertTrue("%s.npy" % unit["data"][attr][1:] in files)
+                    self.assertTrue(f'{unit["data"][attr][1:]}.npy' in files)
             self.assertTrue(1 in unit0["links"])
 
         with NamedTemporaryFile(suffix="-veles-test-package.tar.gz") as fpkg:

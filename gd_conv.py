@@ -235,11 +235,10 @@ class GradientDescentConv(ConvolutionalBase, nn_units.GradientDescentBase):
             self._global_size_weights = (self.weights.size,)
             self._local_size_weights = None
 
-        if self.need_gradient_weights and self.include_bias:
-            self._global_size_bias = (self._side * self.reduce_size,)
-            self._local_size_bias = (self.reduce_size,)
+            if self.include_bias:
+                self._global_size_bias = (self._side * self.reduce_size,)
+                self._local_size_bias = (self.reduce_size,)
 
-        if self.need_gradient_weights:
             self._global_size_ortho = (self._other * self.reduce_size,)
             self._local_size_ortho = (self.reduce_size,)
 
@@ -351,7 +350,7 @@ class GradientDescentConv(ConvolutionalBase, nn_units.GradientDescentBase):
             start_image * self.input.sample_size * self.input.itemsize)
         limit = unpack_side * self._kernel_size
         self._const_i[0] = limit
-        self.krn_err_input_.set_arg(2, self._const_i[0:1])
+        self.krn_err_input_.set_arg(2, self._const_i[:1])
         self.execute_kernel(self._global_size_err_input(limit),
                             self._local_size_err_input, self.krn_err_input_)
 
@@ -371,7 +370,7 @@ class GradientDescentConv(ConvolutionalBase, nn_units.GradientDescentBase):
 
         self.krn_err_input_.set_arg(0, unpack_data)
         self._const_i[0] = start_image * self.input.sample_size
-        self.krn_err_input_.set_arg(2, self._const_i[0:1])
+        self.krn_err_input_.set_arg(2, self._const_i[:1])
         limit = unpack_side * self._kernel_size
         self.execute_kernel(self._global_size_err_input(limit),
                             self._local_size_err_input, self.krn_err_input_)

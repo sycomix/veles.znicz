@@ -104,8 +104,7 @@ class NNRollback(Unit):
         return ww
 
     def calculate_nans(self, gd, name):
-        weights = getattr(gd, name)
-        if weights:
+        if weights := getattr(gd, name):
             weights.map_read()
             return numpy.count_nonzero(numpy.isnan(weights.mem))
         else:
@@ -115,7 +114,7 @@ class NNRollback(Unit):
         weights = getattr(gd, name)
         ww = value.get(name)
         if ww is None:
-            self.warning("No rollback for %s" % name)
+            self.warning(f"No rollback for {name}")
         else:
             self.info("Rolling back to stored weights")
             weights.map_invalidate()
@@ -148,10 +147,10 @@ class NNRollback(Unit):
 
             # Check for NaNs
             for _gd, kv in self._gds.items():
-                nz = 0
-                for weights_name in self.weights_names:
-                    nz += self.calculate_nans(_gd, weights_name)
-                if nz:
+                if nz := sum(
+                    self.calculate_nans(_gd, weights_name)
+                    for weights_name in self.weights_names
+                ):
                     self.warning("NaNs encountered, will rollback to -%d",
                                  self.history_limit)
                     self._minus_steps = self.minus_steps
@@ -174,9 +173,13 @@ class NNRollback(Unit):
                           repr(_gd), k, _gd.learning_rate)
                 for weights_name in self.weights_names:
                     if getattr(_gd, weights_name, None):
-                        setattr(_gd, "%s.mem[:]" % weights_name,
-                                self.rollback_weights(
-                                    _gd, weights_name, kv, rollback_to))
+                        setattr(
+                            _gd,
+                            f"{weights_name}.mem[:]",
+                            self.rollback_weights(
+                                _gd, weights_name, kv, rollback_to
+                            ),
+                        )
 
         self._first_run = False
 

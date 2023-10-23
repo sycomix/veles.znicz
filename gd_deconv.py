@@ -149,9 +149,7 @@ class GDDeconv(ConvolutionalBase, nn_units.GradientDescentBase):
         if self.padding is None:  # pylint: disable=E0203
             self.padding = padding
         elif self.padding != padding and not self.unsafe_padding:
-            raise ValueError(
-                "Expected padding %s got %s"
-                % (str(padding), str(self.padding)))
+            raise ValueError(f"Expected padding {str(padding)} got {str(self.padding)}")
         if self.hits:
             self.hits.initialize(self.device)
 

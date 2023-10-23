@@ -76,7 +76,7 @@ class ImagenetLoaderBase(loader.Loader):
         if self.class_keys_path is not None:
             with open(self.class_keys_path, "r") as fin:
                 self.class_keys = json.load(fin)
-            self.info("Class keys was loaded: len %s" % len(self.class_keys))
+            self.info(f"Class keys was loaded: len {len(self.class_keys)}")
 
     def initialize(self, **kwargs):
         self._original_labels_ = []
@@ -161,8 +161,7 @@ class ImagenetLoaderBase(loader.Loader):
         self.has_mean_file = True
 
     def create_minibatch_data(self):
-        sh = [self.max_minibatch_size]
-        sh.extend((self.final_sy, self.final_sx, self.channels))
+        sh = [self.max_minibatch_size, *(self.final_sy, self.final_sx, self.channels)]
         dtype = opencl_types.dtypes[root.common.engine.precision_type]
         self.minibatch_data.mem = numpy.zeros(sh, dtype=dtype)
 

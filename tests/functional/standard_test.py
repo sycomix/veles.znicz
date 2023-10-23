@@ -65,12 +65,20 @@ class StandardTest(AcceleratedTest):
         return DummyLauncher()
 
     def seed(self):
-        prng.get().seed(numpy.fromfile("%s/znicz/tests/research/seed" %
-                                       root.common.dirs.veles,
-                                       dtype=numpy.int32, count=1024))
-        prng.get(2).seed(numpy.fromfile("%s/znicz/tests/research/seed2" %
-                                        root.common.dirs.veles,
-                                        dtype=numpy.int32, count=1024))
+        prng.get().seed(
+            numpy.fromfile(
+                f"{root.common.dirs.veles}/znicz/tests/research/seed",
+                dtype=numpy.int32,
+                count=1024,
+            )
+        )
+        prng.get(2).seed(
+            numpy.fromfile(
+                f"{root.common.dirs.veles}/znicz/tests/research/seed2",
+                dtype=numpy.int32,
+                count=1024,
+            )
+        )
 
     def tearDown(self):
         if Unit._pool_ is not None:

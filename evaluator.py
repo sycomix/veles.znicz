@@ -96,7 +96,7 @@ class EvaluatorBase(AcceleratedUnit, TriviallyDistributable):
     @mean.setter
     def mean(self, value):
         if not isinstance(value, bool):
-            raise TypeError("mean must be boolean (got %s)" % type(value))
+            raise TypeError(f"mean must be boolean (got {type(value)})")
         self._mean = value
 
     @property
@@ -131,14 +131,10 @@ class EvaluatorBase(AcceleratedUnit, TriviallyDistributable):
             self.output[:self.batch_size]
 
     def get_metric_names(self):
-        if self.testing:
-            return {"Output"}
-        return set()
+        return {"Output"} if self.testing else set()
 
     def get_metric_values(self):
-        if self.testing:
-            return {"Output": self.merged_output}
-        return {}
+        return {"Output": self.merged_output} if self.testing else {}
 
 
 @implementer(IOpenCLUnit, ICUDAUnit, INumpyUnit)
@@ -256,9 +252,9 @@ class EvaluatorSoftmax(EvaluatorBase):
             self.n_err, self.confusion_matrix, self.max_err_output_sum)
 
         self.krn_constants_i_[0] = self.batch_size
-        self.set_arg(3, self.krn_constants_i_[0:1])
+        self.set_arg(3, self.krn_constants_i_[:1])
         self.krn_constants_f_[0] = 1.0 / self.batch_size if self.mean else 1.0
-        self.set_arg(4, self.krn_constants_f_[0:1])
+        self.set_arg(4, self.krn_constants_f_[:1])
 
         self.execute_kernel(self._global_size, self._local_size)
 
@@ -312,22 +308,22 @@ class EvaluatorSoftmax(EvaluatorBase):
         self.n_err[1] += n_total
 
     def get_metric_values(self):
-        if self.testing:
-            output_labels = {}
-            class_keys = getattr(self, "class_keys", None)
-            for index, labels in enumerate(self.merged_output[:]):
-                max_value = 0
-                for label_index, value in enumerate(labels):
-                    if value >= max_value:
-                        max_value = value
-                        max_index = label_index
-                if class_keys is not None:
-                    output_labels[self.class_keys[TEST][
-                        index]] = self.labels_mapping[max_index]
-                else:
-                    output_labels[index] = self.labels_mapping[max_index]
-            return {"Output": output_labels}
-        return {}
+        if not self.testing:
+            return {}
+        output_labels = {}
+        class_keys = getattr(self, "class_keys", None)
+        for index, labels in enumerate(self.merged_output[:]):
+            max_value = 0
+            for label_index, value in enumerate(labels):
+                if value >= max_value:
+                    max_value = value
+                    max_index = label_index
+            if class_keys is not None:
+                output_labels[self.class_keys[TEST][
+                    index]] = self.labels_mapping[max_index]
+            else:
+                output_labels[index] = self.labels_mapping[max_index]
+        return {"Output": output_labels}
 
 
 @implementer(IOpenCLUnit, ICUDAUnit, INumpyUnit)
@@ -391,7 +387,7 @@ class EvaluatorMSE(EvaluatorBase):
     @root.setter
     def root(self, value):
         if not isinstance(value, bool):
-            raise TypeError("root must be boolean (got %s)" % type(value))
+            raise TypeError(f"root must be boolean (got {type(value)})")
         self._root = value
 
     def initialize(self, device, **kwargs):
@@ -401,8 +397,8 @@ class EvaluatorMSE(EvaluatorBase):
 
         if self.target.size != self.output.size:
             raise error.BadFormatError(
-                "target.size != output.size (%s != %s)" %
-                (self.target.size, self.output.size))
+                f"target.size != output.size ({self.target.size} != {self.output.size})"
+            )
 
         self.sources_["evaluator_mse"] = {}
         self.sources_["denormalization"] = {}
@@ -474,9 +470,9 @@ class EvaluatorMSE(EvaluatorBase):
 
         batch_size = self.batch_size
         self.krn_constants_i_[0] = batch_size
-        self.set_arg(2, self.krn_constants_i_[0:1])
+        self.set_arg(2, self.krn_constants_i_[:1])
         self.krn_constants_f_[0] = 1.0 / self.batch_size if self.mean else 1.0
-        self.set_arg(3, self.krn_constants_f_[0:1])
+        self.set_arg(3, self.krn_constants_f_[:1])
 
         self.execute_kernel(self._global_size, self._local_size)
 

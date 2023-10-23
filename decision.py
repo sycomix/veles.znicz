@@ -73,8 +73,8 @@ class DecisionsRegistry(MappedUnitRegistry):
     base = Unit
     loss_mapping = {}
 
-    def __init__(cls, name, bases, clsdict):
-        super(DecisionsRegistry, cls).__init__(name, bases, clsdict)
+    def __init__(self, name, bases, clsdict):
+        super(DecisionsRegistry, self).__init__(name, bases, clsdict)
         if ("LOSS" in clsdict and "MAPPING" in clsdict):
             DecisionsRegistry.loss_mapping[clsdict[
                 "LOSS"]] = clsdict["MAPPING"]
@@ -97,27 +97,27 @@ class IDecision(Interface):
         """This method is supposed to be overriden in inherited classes.
         """
 
-    def on_generate_data_for_slave(data):
+    def on_generate_data_for_slave(self):
         """This method is supposed to be overriden in inherited classes.
         """
 
-    def on_generate_data_for_master(data):
+    def on_generate_data_for_master(self):
         """This method is supposed to be overriden in inherited classes.
         """
 
-    def on_apply_data_from_master(data):
+    def on_apply_data_from_master(self):
         """This method is supposed to be overriden in inherited classes.
         """
 
-    def on_apply_data_from_slave(data, slave):
+    def on_apply_data_from_slave(self, slave):
         """This method is supposed to be overriden in inherited classes.
         """
 
-    def fill_statistics(stats):
+    def fill_statistics(self):
         """This method is supposed to be overriden in inherited classes.
         """
 
-    def fill_snapshot_suffixes(suffixes):
+    def fill_snapshot_suffixes(self):
         """This method is supposed to be overriden in inherited classes.
         """
 
@@ -184,8 +184,7 @@ class DecisionBase(Unit):
             self._max_epochs = None
             return
         if not isinstance(value, int):
-            raise TypeError(
-                "max_epochs must be an integer or None (got %s)" % type(value))
+            raise TypeError(f"max_epochs must be an integer or None (got {type(value)})")
         if value < 1:
             raise ValueError(
                 "max_epochs must be greater than 0 (got %d)" % value)
@@ -409,7 +408,7 @@ class DecisionGD(DecisionBase):
             return {}
         tstr = CLASS_NAME[TRAIN]
         vstr = CLASS_NAME[VALID]
-        cstr = "minimax(%s, %s)" % (tstr, vstr)
+        cstr = f"minimax({tstr}, {vstr})"
         evalfun = root.common.evaluation_transform
         return {
             "Min errors": {
@@ -544,10 +543,7 @@ class DecisionGD(DecisionBase):
         if all(nvl(self.best_minimax_n_err_pt[i], 0) <= 0
                for i in (VALID, TRAIN)):
             return True
-        if (self.epoch_number - self.improved_epoch_number >
-                self.fail_iterations):
-            return True
-        return False
+        return self.epoch_number - self.improved_epoch_number > self.fail_iterations
 
     def fill_statistics(self, ss):
         minibatch_class = self.minibatch_class
@@ -567,12 +563,11 @@ class DecisionGD(DecisionBase):
 
     def fill_snapshot_suffixes(self, ss):
         if self.minibatch_n_err is not None:
-            for set_samples in(TEST, VALID, TRAIN):
+            for set_samples in (TEST, VALID, TRAIN):
                 if self.epoch_n_err_pt[set_samples] is not None:
                     ss.append(
-                        "%s_%s" % (
-                            CLASS_NAME[set_samples],
-                            pt_str(self.epoch_n_err_pt[set_samples], False)))
+                        f"{CLASS_NAME[set_samples]}_{pt_str(self.epoch_n_err_pt[set_samples], False)}"
+                    )
 
     def reset_statistics(self, minibatch_class):
         # Reset statistics per class
@@ -629,9 +624,14 @@ class DecisionMSE(DecisionGD):
         mstr = "RMSE" if self.root else "MSE"
         tstr = CLASS_NAME[TRAIN]
         vstr = CLASS_NAME[VALID]
-        names.update({mstr, "Min %s epochs number" % mstr,
-                      "%s %s on min %s %s" % (tstr, mstr, vstr, mstr),
-                      "EvaluationFitness"})
+        names.update(
+            {
+                mstr,
+                f"Min {mstr} epochs number",
+                f"{tstr} {mstr} on min {vstr} {mstr}",
+                "EvaluationFitness",
+            }
+        )
         return names
 
     def get_metric_values(self):
@@ -641,23 +641,31 @@ class DecisionMSE(DecisionGD):
         mstr = "RMSE" if self.root else "MSE"
         tstr = CLASS_NAME[TRAIN]
         vstr = CLASS_NAME[VALID]
-        cstr = "minimax(%s, %s)" % (tstr, vstr)
+        cstr = f"minimax({tstr}, {vstr})"
         evalfun = root.common.evaluation_transform
-        values.update({
-            mstr: {tstr: "%.12f" % self.best_mse[TRAIN],
-                   vstr: "%.12f" % self.best_mse[VALID],
-                   cstr: "%.12f" %
-                   nmax(self.best_minimax_mse[VALID],
-                        self.best_minimax_mse[TRAIN])},
-            "EvaluationFitness":
-            evalfun(-self.best_minimax_mse[VALID], -self.best_minimax_mse[
-                    TRAIN]),
-            "Min %s epochs number" % mstr:
-            {tstr: self.best_mse_epoch_number[TRAIN],
-             vstr: self.best_mse_epoch_number[VALID],
-             cstr: self.best_minimax_mse_epoch_number},
-            "%s %s on min %s %s" % (tstr, mstr, vstr, mstr):
-            self.best_mse_others[VALID][TRAIN]})
+        values.update(
+            {
+                mstr: {
+                    tstr: "%.12f" % self.best_mse[TRAIN],
+                    vstr: "%.12f" % self.best_mse[VALID],
+                    cstr: "%.12f"
+                    % nmax(
+                        self.best_minimax_mse[VALID], self.best_minimax_mse[TRAIN]
+                    ),
+                },
+                "EvaluationFitness": evalfun(
+                    -self.best_minimax_mse[VALID], -self.best_minimax_mse[TRAIN]
+                ),
+                f"Min {mstr} epochs number": {
+                    tstr: self.best_mse_epoch_number[TRAIN],
+                    vstr: self.best_mse_epoch_number[VALID],
+                    cstr: self.best_minimax_mse_epoch_number,
+                },
+                f"{tstr} {mstr} on min {vstr} {mstr}": self.best_mse_others[VALID][
+                    TRAIN
+                ],
+            }
+        )
         return values
 
     def on_last_minibatch(self):
@@ -762,7 +770,4 @@ class DecisionMSE(DecisionGD):
     def stop_condition(self):
         if all(nvl(self.best_minimax_mse[i], 0) <= 0 for i in (VALID, TRAIN)):
             return True
-        if (self.epoch_number - self.improved_epoch_number >
-                self.fail_iterations):
-            return True
-        return False
+        return self.epoch_number - self.improved_epoch_number > self.fail_iterations

@@ -48,6 +48,7 @@ under the License.
 """
 
 
+
 import cv2
 import json
 import logging
@@ -78,49 +79,44 @@ root.prep_imagenet.series = "img"
 root.prep_imagenet.root_path = os.path.join(
     root.common.dirs.datasets, "AlexNet", root.prep_imagenet.root_name)
 
-root.prep_imagenet.update({
-    "file_with_indices":
-    os.path.join(root.prep_imagenet.root_path,
-                 "indices_imagenet_2014_list.txt"),
-    "file_indices_to_categories":
-    os.path.join(root.prep_imagenet.root_path, "indices_to_categories.txt"),
-    "file_text_to_int_labels":
-    os.path.join(
-        root.prep_imagenet.root_path,
-        "text_to_int_labels_%s_%s.json"
-        % (root.prep_imagenet.root_name, root.prep_imagenet.series)),
-    "file_original_labels":
-    os.path.join(
-        root.prep_imagenet.root_path,
-        "original_labels_%s_%s.pickle"
-        % (root.prep_imagenet.root_name, root.prep_imagenet.series)),
-    "file_original_data":
-    os.path.join(
-        root.prep_imagenet.root_path,
-        "original_data_%s_%s.dat"
-        % (root.prep_imagenet.root_name, root.prep_imagenet.series)),
-    "file_matrix":
-    os.path.join(
-        root.prep_imagenet.root_path,
-        "matrixes_%s_%s.pickle"
-        % (root.prep_imagenet.root_name, root.prep_imagenet.series)),
-    "file_hierarchy":
-    os.path.join(root.prep_imagenet.root_path,
-                 "hierarchy_2014_DET_train_0.json"),
-    "file_count_samples":
-    os.path.join(
-        root.prep_imagenet.root_path,
-        "count_samples_%s_%s.json"
-        % (root.prep_imagenet.root_name, root.prep_imagenet.series)),
-    "rect": (256, 256),
-    "channels": 3,
-    "get_label": "all_ways",
-    # "from_image_name" "from_image_path" "from_xml" "all_ways"
-    "get_label_from_txt_label": True,
-    "command_to_run": "save_dataset_to_file"
-    # "save_dataset_to_file" "init_dataset" "test_load_data"
-    # "save_validation_to_forward"
-})
+root.prep_imagenet.update(
+    {
+        "file_with_indices": os.path.join(
+            root.prep_imagenet.root_path, "indices_imagenet_2014_list.txt"
+        ),
+        "file_indices_to_categories": os.path.join(
+            root.prep_imagenet.root_path, "indices_to_categories.txt"
+        ),
+        "file_text_to_int_labels": os.path.join(
+            root.prep_imagenet.root_path,
+            f"text_to_int_labels_{root.prep_imagenet.root_name}_{root.prep_imagenet.series}.json",
+        ),
+        "file_original_labels": os.path.join(
+            root.prep_imagenet.root_path,
+            f"original_labels_{root.prep_imagenet.root_name}_{root.prep_imagenet.series}.pickle",
+        ),
+        "file_original_data": os.path.join(
+            root.prep_imagenet.root_path,
+            f"original_data_{root.prep_imagenet.root_name}_{root.prep_imagenet.series}.dat",
+        ),
+        "file_matrix": os.path.join(
+            root.prep_imagenet.root_path,
+            f"matrixes_{root.prep_imagenet.root_name}_{root.prep_imagenet.series}.pickle",
+        ),
+        "file_hierarchy": os.path.join(
+            root.prep_imagenet.root_path, "hierarchy_2014_DET_train_0.json"
+        ),
+        "file_count_samples": os.path.join(
+            root.prep_imagenet.root_path,
+            f"count_samples_{root.prep_imagenet.root_name}_{root.prep_imagenet.series}.json",
+        ),
+        "rect": (256, 256),
+        "channels": 3,
+        "get_label": "all_ways",
+        "get_label_from_txt_label": True,
+        "command_to_run": "save_dataset_to_file",
+    }
+)
 
 root.prep_imagenet.classes_count = (
     200 if root.prep_imagenet.series == "DET" else 1000)
@@ -204,9 +200,9 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
                         self.get_images_from_path(f_path, [], set_type)
                     else:
                         self.warning("Unexpected file in dir %s", f)
-        self.info("Saving images to %s" % self.root_path)
+        self.info(f"Saving images to {self.root_path}")
         self.save_images_to_json(self.images)
-        self.info("Label is None! %s times" % self.k)
+        self.info(f"Label is None! {self.k} times")
         return None
 
     def get_label_from_image_name(self, image_path):
@@ -215,11 +211,10 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
         temp_label = image_name.split('_')[0]
         if temp_label in self.get_labels_list_from_file():
             labels.append(temp_label)
+        elif root.prep_imagenet.get_label == "all_ways":
+            return labels
         else:
-            if root.prep_imagenet.get_label == "all_ways":
-                return labels
-            self.warning(
-                "Not a label %s in picture %s" % (temp_label, image_name))
+            self.warning(f"Not a label {temp_label} in picture {image_name}")
         return labels
 
     def get_label_from_image_path(self, image_path):
@@ -229,17 +224,16 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
         temp_label = dir_name
         if temp_label in self.get_labels_list_from_file():
             labels.append(temp_label)
+        elif root.prep_imagenet.get_label == "all_ways":
+            return labels
         else:
-            if root.prep_imagenet.get_label == "all_ways":
-                return labels
-            self.warning(
-                "Not a label %s in picture %s" % (temp_label, image_path))
+            self.warning(f"Not a label {temp_label} in picture {image_path}")
         return labels
 
     def get_label_from_xml(self, image_path):
-        result_labels = []
         labels = []
         label = None
+        result_labels = []
         for set_type, (dir_images, dir_bboxes) in (
                 i for i in sorted(self.map_items) if i[1][1]):
             if image_path.find(dir_images) == -1:
@@ -248,9 +242,7 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
             xml_path = head + dir_bboxes + image_tail.replace(".JPEG", ".xml")
             if not os.access(xml_path, os.R_OK):
                 if xml_path.find("test") < 0:
-                    self.warning(
-                        "File %s does not exist or read permission is denied"
-                        % xml_path)
+                    self.warning(f"File {xml_path} does not exist or read permission is denied")
                 return
             with open(xml_path, "r") as fr:
                 tree = xmltodict.parse(fr.read())
@@ -264,25 +256,21 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
                     labels.append(bbx["name"])
             if len(labels) > 1 and self.series == "img":
                 self.warning(
-                    "More than one label in picture! labels:"
-                    "%s picture: %s" % (labels, image_path))
+                    f"More than one label in picture! labels:{labels} picture: {image_path}"
+                )
                 continue
             for temp_label in labels:
                 if temp_label in self.get_labels_list_from_file():
                     label = temp_label
                 else:
-                    self.warning(
-                        "Not a label %s in picture %s"
-                        % (temp_label, image_path))
+                    self.warning(f"Not a label {temp_label} in picture {image_path}")
                 if (root.prep_imagenet.get_label_from_txt_label
                         and label is None):
                     tmp_label = self.get_label_from_txt_label(temp_label)
                     if tmp_label in self.get_labels_list_from_file():
                         label = tmp_label
                     else:
-                        self.warning(
-                            "Not a label %s in picture %s"
-                            % (tmp_label, image_path))
+                        self.warning(f"Not a label {tmp_label} in picture {image_path}")
                 result_labels.append(label)
         return result_labels
 
@@ -318,8 +306,7 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
                 self.get_label_from_image_path(path) or
                 self.get_label_from_xml(path))
         else:
-            labels = getattr(
-                self, "get_label_" + root.prep_imagenet.get_label)(path)
+            labels = getattr(self, f"get_label_{root.prep_imagenet.get_label}")(path)
         if self.series == "DET":
             return [self.get_det_label_from_label(l) for l in labels]
         return labels
@@ -344,8 +331,7 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
     def get_images_from_path(self, path, labels, set_type):
         self.labels = labels
         if not os.access(path, os.R_OK):
-            self.warning(
-                "File %s does not exist or read permission is denied" % path)
+            self.warning(f"File {path} does not exist or read permission is denied")
             return
         self.info(path)
         image_name = os.path.basename(path)
@@ -377,21 +363,19 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
                 "bbxs": []}
             self.fill_images_from_xml(path, set_type, image_name)
         else:
-            raise ValueError("Unsupported series name: %s" % self.series)
+            raise ValueError(f"Unsupported series name: {self.series}")
 
     def fill_images_from_xml(self, image_path, set_type, image_name):
         (dir_images, dir_bboxes) = root.prep_imagenet.MAPPING[
             self.root_name][self.series][set_type]
         if image_path.find(dir_images) == -1:
             raise ValueError(
-                "Image path %s is wrong. Should be in %s folder" %
-                (image_path, dir_images))
+                f"Image path {image_path} is wrong. Should be in {dir_images} folder"
+            )
         head, image_tail = image_path.split(dir_images)
         xml_path = head + dir_bboxes + image_tail.replace(".JPEG", ".xml")
         if not os.access(xml_path, os.R_OK):
-            self.warning(
-                "File %s does not exist or read permission is denied"
-                % xml_path)
+            self.warning(f"File {xml_path} does not exist or read permission is denied")
             return
         with open(xml_path, "r") as fr:
             tree = xmltodict.parse(fr.read())
@@ -418,7 +402,7 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
                             "y": y}
                 self.images[set_type][image_name]["bbxs"].append(dict_bbx)
         else:
-            self.warning("Xml %s has no object attribute" % xml_path)
+            self.warning(f"Xml {xml_path} has no object attribute")
 
     def init_files_det(self):
         patgh_to_devkit = os.path.join(
@@ -455,9 +439,9 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
     def get_images_from_dict(
             self, set_type, text_file, abs_path_text_files, root_folder):
         map_items = root.prep_imagenet.MAPPING[self.root_name][self.series]
-        dir_set_type = {k: map_items[k][0] for k in (TEST, VALIDATION, TRAIN)}
         if text_file.find(set_type) != -1:
             images_from_file = self.get_dict_from_files(abs_path_text_files)
+            dir_set_type = {k: map_items[k][0] for k in (TEST, VALIDATION, TRAIN)}
             for dict in images_from_file:
                 tail = dict["tail_path"]
                 labels = dict["labels"]
@@ -471,7 +455,7 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
         with open(abs_path_text_files, "r") as fin:
             for line in fin:
                 path_tail, _, label = line.partition(' ')
-                path_tail = path_tail.strip() + ".JPEG"
+                path_tail = f"{path_tail.strip()}.JPEG"
                 labels.append(label if label else None)
                 images_from_file.append(
                     {"tail_path": path_tail, "labels": labels})
@@ -479,11 +463,11 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
 
     def get_mean(self, set_type, image_name, image):
         for bbx in self.images[set_type][image_name]["bbxs"]:
-            x = bbx["x"]
-            y = bbx["y"]
             h_size = bbx["height"]
             w_size = bbx["width"]
             if h_size >= 8 and w_size >= 8 and h_size * w_size >= 256:
+                x = bbx["x"]
+                y = bbx["y"]
                 self.sample_rect(image, x, y, h_size, w_size, None)
 
     def sample_rect(self, img, x_c, y_c, h_size, w_size, mean):
@@ -537,16 +521,16 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
     def get_dataset_DET(
             self, set_type, image_name, image_path, image, mean, threshold):
         for bbx in self.images[set_type][image_name]["bbxs"]:
-            x = bbx["x"]
-            y = bbx["y"]
             h_size = bbx["height"]
             w_size = bbx["width"]
-            txt_label = bbx["label"]
             if (h_size >= threshold and w_size >= threshold and
                     h_size * w_size >= threshold * threshold):
+                txt_label = bbx["label"]
                 word_label = self.get_word_label_from_num(txt_label)
                 int_label = self.labels_int_txt[txt_label]
                 self.original_labels.append((word_label, int_label - 1))
+                x = bbx["x"]
+                y = bbx["y"]
                 sample = self.prep_and_save_sample(
                     image, x, y, h_size, w_size, mean)
                 sample.tofile(self.file_samples)
@@ -567,14 +551,13 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
                 else data, cv2.CV_32F, 0, 1, ksize=self._sobel_kernel_size)
             deriv = numpy.sqrt(numpy.square(deriv_x) + numpy.square(deriv_y))
             deriv -= deriv.min()
-            mx = deriv.max()
-            if mx:
+            if mx := deriv.max():
                 deriv *= 255.0 / mx
             deriv = numpy.clip(deriv, 0, 255).astype(numpy.uint8)
-        if self.colorspace != "RGB" and not (data.shape[-1] == 1 and
-                                             self.colorspace == "GRAY"):
-            cv2.cvtColor(data, getattr(cv2, "COLOR_RGB2" + self.colorspace),
-                         data)
+        if self.colorspace != "RGB" and (
+            data.shape[-1] != 1 or self.colorspace != "GRAY"
+        ):
+            cv2.cvtColor(data, getattr(cv2, f"COLOR_RGB2{self.colorspace}"), data)
         if self._include_derivative:
             shape = list(data.shape)
             shape[-1] += 1
@@ -621,7 +604,7 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
                 if word not in diff_words:
                     diff_words.append(word)
                 if len(diff_nums) - len(diff_words) == 1:
-                    word += "_%s" % num
+                    word += f"_{num}"
                     diff_words.append(word)
                 assert len(diff_nums) == len(diff_words)
                 self.num_word.append((num, word))
@@ -637,9 +620,7 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
                 self.root_path,
                 IMAGES_JSON % (self.root_name, self.series, set_type))
             try:
-                self.info(
-                    "Loading images info from %s to calculate mean" %
-                    images_file_name)
+                self.info(f"Loading images info from {images_file_name} to calculate mean")
                 with open(images_file_name, 'r') as fp:
                     self.images[set_type] = json.load(fp)
             except Exception as e:
@@ -658,9 +639,7 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
                 self.root_path,
                 IMAGES_JSON % (self.root_name, self.series, set_type))
             try:
-                self.info(
-                    "Loading images info from %s to resize" %
-                    images_file_name)
+                self.info(f"Loading images info from {images_file_name} to resize")
                 with open(images_file_name, 'r') as fp:
                     self.images[set_type] = json.load(fp)
             except Exception as e:
@@ -669,23 +648,28 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
             for image_name in sorted(self.images[set_type].keys()):
                 image_fnme = self.images[set_type][image_name]["path"]
                 image = self.decode_image(image_fnme)
-                getattr(self, "get_dataset_%s" % self.series)(
-                    set_type, image_name, image_fnme, image, mean,
-                    self.threshold_train)
+                getattr(self, f"get_dataset_{self.series}")(
+                    set_type,
+                    image_name,
+                    image_fnme,
+                    image,
+                    mean,
+                    self.threshold_train,
+                )
         with open(original_labels_dir, "wb") as fout:
-            self.info("Saving labels of images to %s" %
-                      original_labels_dir)
+            self.info(f"Saving labels of images to {original_labels_dir}")
             pickle.dump(self.original_labels, fout)
         with open(count_samples_dir, "w") as fout:
-            logging.info("Saving count of test, validation and train to %s"
-                         % count_samples_dir)
+            logging.info(
+                f"Saving count of test, validation and train to {count_samples_dir}"
+            )
             json.dump(self.count_samples, fout)
         mean, rdisp = self.transform_matrixes(self.s_sum, self.s_count)
         self.save_matrixes(mean, rdisp, matrix_file)
         class_keys_path = os.path.join(
-            self.root_path,
-            "class_keys_%s_%s.json" % (self.root_name, self.series))
-        self.info("Saving class_keys to %s" % class_keys_path)
+            self.root_path, f"class_keys_{self.root_name}_{self.series}.json"
+        )
+        self.info(f"Saving class_keys to {class_keys_path}")
         with open(class_keys_path, 'w') as fp:
             json.dump(self.class_keys, fp)
         self.file_samples.close()
@@ -701,8 +685,11 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
         if self.series != "DET" and len(txt_labels) > 1:
             self.error("Too much labels for image")
         else:
-            if not ((txt_labels is None or len(txt_labels) == 0)
-                    and set_type == "test"):
+            if (
+                txt_labels is not None
+                and len(txt_labels) != 0
+                or set_type != "test"
+            ):
                 for txt_label in txt_labels:
                     word_label = self.get_word_label_from_num(txt_label)
                     int_label = self.labels_int_txt[txt_label]
@@ -751,8 +738,7 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
         self.matrixes.append(mean)
         self.matrixes.append(rdisp)
         with open(matrix_file, "wb") as fout:
-            self.info(
-                "Saving mean, min and max matrix to %s" % matrix_file)
+            self.info(f"Saving mean, min and max matrix to {matrix_file}")
             pickle.dump(self.matrixes, fout)
 
     def transformation_image(self, image):
@@ -762,24 +748,26 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
             sample = cv2.resize(
                 image, self.rect, interpolation=cv2.INTER_LANCZOS4)
         else:
-            raise ValueError("Unsupported series name: %s" % self.series)
+            raise ValueError(f"Unsupported series name: {self.series}")
         return sample
 
     def test_load_data(self):
         path_labels = os.path.join(
-            root.prep_imagenet.root_path, "original_labels_%s_%s.pickle"
-            % (root.prep_imagenet.root_name, root.prep_imagenet.series))
+            root.prep_imagenet.root_path,
+            f"original_labels_{root.prep_imagenet.root_name}_{root.prep_imagenet.series}.pickle",
+        )
 
         path_data = os.path.join(
-            root.prep_imagenet.root_path, "original_data_%s_%s.dat"
-            % (root.prep_imagenet.root_name, root.prep_imagenet.series))
+            root.prep_imagenet.root_path,
+            f"original_data_{root.prep_imagenet.root_name}_{root.prep_imagenet.series}.dat",
+        )
         rand = rnd.get()
         with open(path_labels, "rb") as fout:
             fout_file = pickle.load(fout)
         i = int(rand.rand() * len(fout_file))
-        self.info("image number i %s" % i)
+        self.info(f"image number i {i}")
         label = fout_file[i]
-        self.info("label %s" % str(label))
+        self.info(f"label {str(label)}")
         self.file_samples = open(path_data, "rb")
         if self.series == "DET":
             sample = numpy.zeros([216, 216, 4], dtype=numpy.uint8)
@@ -795,14 +783,16 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
         self.info("Resized validation to query of Neural Network")
 
         original_labels_dir = os.path.join(
-            self.root_path, "original_labels_%s_%s_forward.pickle" %
-            (self.root_name, self.series))
+            self.root_path,
+            f"original_labels_{self.root_name}_{self.series}_forward.pickle",
+        )
         path_for_matrixes = os.path.join(
-            self.root_path, "matrixes_%s_%s.pickle" %
-            (self.root_name, self.series))
+            self.root_path, f"matrixes_{self.root_name}_{self.series}.pickle"
+        )
         original_data_dir = os.path.join(
-            self.root_path, "original_data_%s_%s_forward.dat" %
-            (self.root_name, self.series))
+            self.root_path,
+            f"original_data_{self.root_name}_{self.series}_forward.dat",
+        )
         with open(path_for_matrixes, "rb") as file_matr:
             matrixes = pickle.load(file_matr)
         mean = matrixes[0]
@@ -810,7 +800,7 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
                             IMAGES_JSON %
                             (self.root_name, self.series, set_type))
         try:
-            self.info("Loading images info from %s to resize" % fnme)
+            self.info(f"Loading images info from {fnme} to resize")
             with open(fnme, 'r') as fp:
                 self.images[set_type] = json.load(fp)
         except OSError:
@@ -819,13 +809,13 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
         for image_name, _val in sorted(self.images[set_type].items()):
             image_fnme = self.images[set_type][image_name]["path"]
             image = self.decode_image(image_fnme)
-            getattr(self, "get_dataset_%s" % self.series)(
-                set_type, image_name, image, mean, self.threshold_val)
+            getattr(self, f"get_dataset_{self.series}")(
+                set_type, image_name, image, mean, self.threshold_val
+            )
 
-        self.info("Saving images to %s" % original_data_dir)
+        self.info(f"Saving images to {original_data_dir}")
         with open(original_labels_dir, "wb") as fout:
-            self.info("Saving labels of images to %s" %
-                      original_labels_dir)
+            self.info(f"Saving labels of images to {original_labels_dir}")
             pickle.dump(self.original_labels, fout)
         self.file_samples.close()
 
@@ -837,8 +827,7 @@ training Neural Network. And use it in ImagenetForward workflow, for example.
         else:
             self.error("Unknow series. Please choose DET or img")
         if len(self.labels_int_txt) != root.prep_imagenet.classes_count:
-            self.warning(
-                "Wrong number of classes - %s" % len(self.labels_int_txt))
+            self.warning(f"Wrong number of classes - {len(self.labels_int_txt)}")
         else:
             fnme = root.prep_imagenet.file_text_to_int_labels
             with open(fnme, 'w') as fp:

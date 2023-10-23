@@ -89,7 +89,7 @@ class MnistLoader(FullBatchLoader):
             key: value for key, value in self.files.items()
             if key not in keys_to_remove}
 
-        if self.files == {}:
+        if not self.files:
             return
 
         self.info(
@@ -98,7 +98,7 @@ class MnistLoader(FullBatchLoader):
 
         for index, (k, v) in enumerate(sorted(self.files.items())):
             self.info("%d/%d", index + 1, len(self.files))
-            wget.download("%s/%s" % (self.URL, k), self.data_path)
+            wget.download(f"{self.URL}/{k}", self.data_path)
             self.info("")
             with open(os.path.join(self.data_path, v), "wb") as fout:
                 gz_file = os.path.join(self.data_path, k)

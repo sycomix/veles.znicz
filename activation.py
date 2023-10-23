@@ -298,10 +298,7 @@ class ForwardMul(ActivationForward):
     def apply_data_from_slave(self, data, slave):
         if data is None:
             return
-        if self.factor is None:
-            self.factor = data
-        else:
-            self.factor = min(self.factor, data)
+        self.factor = data if self.factor is None else min(self.factor, data)
 
     @property
     def factor(self):
@@ -603,7 +600,7 @@ class ForwardSinCos(ActivationForward):
     def numpy_run(self):
         inp, out = self.numpy_prerun(make_raveled=True, copy_in2out=False)
         out[1::2] = numpy.sin(inp[1::2])
-        out[0::2] = numpy.cos(inp[0::2])
+        out[::2] = numpy.cos(inp[::2])
 
 
 class BackwardSinCos(ActivationBackward):
@@ -621,6 +618,6 @@ class BackwardSinCos(ActivationBackward):
 
     def numpy_run(self):
         inp, _, err_input, err_output = \
-            self.numpy_prerun(is_raveled=True, io_usage=(True, False))
+                self.numpy_prerun(is_raveled=True, io_usage=(True, False))
         err_input[1::2] = err_output[1::2] * numpy.cos(inp[1::2])
-        err_input[0::2] = err_output[0::2] * (-numpy.sin(inp[0::2]))
+        err_input[::2] = err_output[::2] * -numpy.sin(inp[::2])

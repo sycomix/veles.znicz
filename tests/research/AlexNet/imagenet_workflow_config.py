@@ -33,6 +33,7 @@ under the License.
 """
 
 
+
 import os
 
 from veles.config import root
@@ -47,7 +48,8 @@ root.common.engine.backend = "cuda"
 root.imagenet.root_name = "imagenet"
 root.imagenet.series = "img"
 root.imagenet.root_path = os.path.join(
-    root.common.dirs.datasets, "AlexNet", "%s" % root.imagenet.root_name)
+    root.common.dirs.datasets, "AlexNet", f"{root.imagenet.root_name}"
+)
 
 root.imagenet.lr_adjuster.lr_parameters = {
     "lrs_with_lengths":
@@ -56,37 +58,35 @@ root.imagenet.lr_adjuster.bias_lr_parameters = {
     "lrs_with_lengths":
     [(1, 100000), (0.1, 100000), (0.1, 100000), (0.01, 100000000)]}
 
-root.imagenet.loader.update({
-    "sx": 256,
-    "sy": 256,
-    "crop_size_sx": 227,
-    "crop_size_sy": 227,
-    "mirror": True,
-    "channels": 3,
-    "minibatch_size": 256,
-    "normalization_type": "none",
-    "shuffle_limit": 1,
-    "original_labels_filename":
-    os.path.join(
-        root.imagenet.root_path,
-        "original_labels_%s_%s.pickle"
-        % (root.imagenet.root_name, root.imagenet.series)),
-    "samples_filename":
-    os.path.join(
-        root.imagenet.root_path,
-        "original_data_%s_%s.dat"
-        % (root.imagenet.root_name, root.imagenet.series)),
-    "matrixes_filename":
-    os.path.join(
-        root.imagenet.root_path,
-        "matrixes_%s_%s.pickle"
-        % (root.imagenet.root_name, root.imagenet.series)),
-    "count_samples_filename":
-    os.path.join(
-        root.imagenet.root_path,
-        "count_samples_%s_%s.json"
-        % (root.imagenet.root_name, root.imagenet.series)),
-})
+root.imagenet.loader.update(
+    {
+        "sx": 256,
+        "sy": 256,
+        "crop_size_sx": 227,
+        "crop_size_sy": 227,
+        "mirror": True,
+        "channels": 3,
+        "minibatch_size": 256,
+        "normalization_type": "none",
+        "shuffle_limit": 1,
+        "original_labels_filename": os.path.join(
+            root.imagenet.root_path,
+            f"original_labels_{root.imagenet.root_name}_{root.imagenet.series}.pickle",
+        ),
+        "samples_filename": os.path.join(
+            root.imagenet.root_path,
+            f"original_data_{root.imagenet.root_name}_{root.imagenet.series}.dat",
+        ),
+        "matrixes_filename": os.path.join(
+            root.imagenet.root_path,
+            f"matrixes_{root.imagenet.root_name}_{root.imagenet.series}.pickle",
+        ),
+        "count_samples_filename": os.path.join(
+            root.imagenet.root_path,
+            f"count_samples_{root.imagenet.root_name}_{root.imagenet.series}.json",
+        ),
+    }
+)
 
 root.imagenet.update({
     "decision": {"fail_iterations": 10000,

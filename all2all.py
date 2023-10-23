@@ -124,7 +124,7 @@ class All2All(FullyConnectedOutput, NNLayerBase):
         elif filling == "constant":
             array[:] = stddev
         else:
-            raise error.BadFormatError("Invalid filling type %s" % filling)
+            raise error.BadFormatError(f"Invalid filling type {filling}")
 
     def initialize(self, device, **kwargs):
         if not self.input:
@@ -185,9 +185,9 @@ class All2All(FullyConnectedOutput, NNLayerBase):
         self.init_vectors(self.input, self.output, self.weights, self.bias)
 
     def _create_output(self):
-        if self.output and self.output.shape == self.output_shape:
-            return
         if self.output:
+            if self.output.shape == self.output_shape:
+                return
             assert self.output.shape[1:] == self.output_shape[1:]
         if not self.output or self.output_shape[0] != self.output.shape[0]:
             self.output.reset(numpy.zeros(self.output_shape, self.input.dtype))
@@ -246,9 +246,7 @@ class All2All(FullyConnectedOutput, NNLayerBase):
             self.execute_kernel(self._global_size_bias, self._local_size_bias)
 
     def ocl_run(self):
-        if self.intel_opencl_workaround:
-            return self.numpy_run()
-        return self._gpu_run()
+        return self.numpy_run() if self.intel_opencl_workaround else self._gpu_run()
 
     def cuda_run(self):
         return self._gpu_run()

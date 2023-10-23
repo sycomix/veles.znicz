@@ -173,8 +173,7 @@ class GDPooling(PoolingBase, nn_units.GradientDescentBase,
 
     def run(self):
         t1 = time.time()
-        retval = super(GDPooling, self).run()
-        if retval:
+        if retval := super(GDPooling, self).run():
             return retval
         self.print_debug_data(t1)
 
@@ -277,10 +276,10 @@ class GDAvgPooling(GDPooling):
         for (batch, y, x, ch), err in numpy.ndenumerate(self.err_output.mem):
             hx1 = x * self.sliding[0]
             hx2 = hx1 + self.kx
-            hx2 = hx2 if hx2 < self.sx else self.sx
+            hx2 = min(hx2, self.sx)
             hy1 = y * self.sliding[1]
             hy2 = hy1 + self.ky
-            hy2 = hy2 if hy2 < self.sy else self.sy
+            hy2 = min(hy2, self.sy)
             delta = err / ((hx2 - hx1) * (hy2 - hy1))
             for i, j in ((ii, jj) for ii in range(hy1, hy2)
                          for jj in range(hx1, hx2)):

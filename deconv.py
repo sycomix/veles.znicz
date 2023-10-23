@@ -161,8 +161,7 @@ class Deconv(TriviallyDistributable, ConvolutionalBase, nn_units.Forward):
             self.padding = padding
         elif self.padding != padding:
             if not self.unsafe_padding:
-                raise ValueError(
-                    "Expected padding %s but got %s" % (padding, self.padding))
+                raise ValueError(f"Expected padding {padding} but got {self.padding}")
             self._create_hits(output_shape)
 
         if self.output:

@@ -105,14 +105,14 @@ class ImageNetCategories(object):
             return "UNDEFINED"
 
     def name_to_description(self, name):
-        if name in self.__class__.names_to_indices:
-            index = self.__class__.names_to_indices[name]
-            if index in self.__class__.indices_to_descriptions:
-                return self.__class__.indices_to_descriptions[index]
-            else:
-                return "UNDEFINED"
-        else:
+        if name not in self.__class__.names_to_indices:
             return "UNDEFINED"
+        index = self.__class__.names_to_indices[name]
+        return (
+            self.__class__.indices_to_descriptions[index]
+            if index in self.__class__.indices_to_descriptions
+            else "UNDEFINED"
+        )
 
     def indices_list_convertion(self, indices, include_names,
                                 include_descriptions, printList=False):
@@ -143,16 +143,16 @@ class ImageNetCategories(object):
             subcategories += [index]
         if not recursive:
             subcategories += self.__class__.hierarchy[index]
-            return subcategories
         else:
             stack = [index]
-            while(len(stack) > 0):
+            while stack:
                 cur_category = stack.pop()
                 new_subcategories = self.__class__.hierarchy[cur_category]
                 stack += new_subcategories
                 subcategories += new_subcategories
 
-            return subcategories
+
+        return subcategories
 
     def __init__(self):
         if not self.__class__.lists_loaded:

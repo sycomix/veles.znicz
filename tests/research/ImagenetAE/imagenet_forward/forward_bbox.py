@@ -154,10 +154,7 @@ def bbox_overlap_ratio(bbox_a, bbox_b):
     area_b = (xmax_b - xmin_b + 1) * (ymax_b - ymin_b + 1)
 
     union_area = area_a + area_b - overlap_area
-    if union_area == 0:
-        return 0
-    else:
-        return overlap_area / union_area
+    return 0 if union_area == 0 else overlap_area / union_area
 
 
 def bbox_has_inclusion(bbox_a, bbox_b, area_ratio=0.9):
@@ -391,7 +388,7 @@ def merge_bboxes_by_probs(bboxes, probs, img_size, primary_thr=0,
     result_bboxes = []
     result_probs = []
 
-    while len(bbox_ids) > 0:
+    while bbox_ids:
         main_index = len(bbox_ids) - 1
 
         if max_bboxes is not None:

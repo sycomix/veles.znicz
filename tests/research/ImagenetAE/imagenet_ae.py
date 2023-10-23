@@ -116,8 +116,7 @@ class ImagenetAELoader(ImagenetLoaderBase):
         self.load_mean()
 
     def create_minibatch_data(self):
-        sh = [self.max_minibatch_size]
-        sh.extend((self.final_sy, self.final_sx, self.channels))
+        sh = [self.max_minibatch_size, *(self.final_sy, self.final_sx, self.channels)]
         self.minibatch_data.mem = numpy.zeros(sh, dtype=numpy.uint8)
 
 
@@ -156,7 +155,7 @@ class ImagenetAEWorkflow(StandardWorkflow):
             pooling.StochasticPooling: depooling.Depooling,
             pooling.MaxPooling: depooling.Depooling}
         self.gd_map = {}
-        for layer_type, forw_back in (dict(self.layer_map)).items():
+        for forw_back in (dict(self.layer_map)).values():
             if len(forw_back) > 1:
                 if issubclass(forw_back[0], nn_units.ForwardBase):
                     self.gd_map[forw_back[0]] = forw_back[1]
@@ -272,7 +271,7 @@ class ImagenetAEWorkflow(StandardWorkflow):
 
             self.reset_best_error()
             self.decision.max_epochs += \
-                root.imagenet_ae.decision_mse.max_epochs
+                    root.imagenet_ae.decision_mse.max_epochs
             last = self.gds[0]
 
         else:
@@ -344,8 +343,9 @@ class ImagenetAEWorkflow(StandardWorkflow):
 
             # Strip gd's without weights
             for i in range(len(gds) - 1, -1, -1):
-                if (isinstance(gds[i], gd.GradientDescent) or
-                        isinstance(gds[i], gd_conv.GradientDescentConv)):
+                if isinstance(
+                    gds[i], (gd.GradientDescent, gd_conv.GradientDescentConv)
+                ):
                     break
                 unit = gds.pop(-1)
                 unit.unlink_all()
@@ -366,7 +366,7 @@ class ImagenetAEWorkflow(StandardWorkflow):
                     self.del_ref(unit)
                 del self.mse_plotter[:]
                 for weights_input in ("weights", "input", "output"):
-                    name = "ae_weights_plotter_%s" % weights_input
+                    name = f"ae_weights_plotter_{weights_input}"
                     self.unlink_unit(name)
                 self.unlink_unit("plt_deconv")
                 prev = self.link_error_plotter(self.gds[0])
@@ -428,7 +428,7 @@ class ImagenetAEWorkflow(StandardWorkflow):
                 self.del_ref(unit)
             del self.mse_plotter[:]
             for weights_input in ("weights", "input", "output"):
-                name = "ae_weights_plotter_%s" % weights_input
+                name = f"ae_weights_plotter_{weights_input}"
                 self.unlink_unit(name)
             prev = self.link_error_plotter(self.gds[0])
             prev = self.link_weights_plotter("weights", prev)
@@ -610,7 +610,7 @@ class ImagenetAEWorkflow(StandardWorkflow):
 
     def link_ae_weights_plotter(
             self, weights_input, last_conv, last_ae, *parents):
-        name = "ae_weights_plotter_%s" % weights_input
+        name = f"ae_weights_plotter_{weights_input}"
         self.unlink_unit(name)
         setattr(self, name, nn_plotting_units.Weights2D(
             self, name=weights_input, **self.config.weights_plotter))

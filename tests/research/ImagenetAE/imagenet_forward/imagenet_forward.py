@@ -147,13 +147,13 @@ class MergeBboxes(Unit):
         sorted_bboxes = list(sorted(
             bboxes, key=lambda bbox: self._distance_from_center(bbox)))
         best = sorted_bboxes[0]
-        winners = []
-        for bbox in sorted_bboxes:
-            if self._bboxes_compatibility(best, bbox) > \
-               self.compatibility_threshold or \
-               bbox[2][2] * bbox[2][3] >= best[2][2] * best[2][3]:
-                winners.append(bbox)
-        return winners
+        return [
+            bbox
+            for bbox in sorted_bboxes
+            if self._bboxes_compatibility(best, bbox)
+            > self.compatibility_threshold
+            or bbox[2][2] * bbox[2][3] >= best[2][2] * best[2][3]
+        ]
 
     def _merge(self):
         if self.rawfd is not None and self.mode == "merge":
@@ -171,11 +171,12 @@ class MergeBboxes(Unit):
                 self._bboxes, pic_size=self._image_size)
             self.validate(winning_bboxes, self._image, self._bboxes)
             if not self.ignore_negative:
-                tmp_bboxes = []
-                for bbox in winning_bboxes[:self.max_per_class]:
-                    if bbox[0] > 0:
-                        tmp_bboxes.append(bbox)
-                if len(tmp_bboxes) == 0:
+                tmp_bboxes = [
+                    bbox
+                    for bbox in winning_bboxes[: self.max_per_class]
+                    if bbox[0] > 0
+                ]
+                if not tmp_bboxes:
                     for bbox in winning_bboxes[self.max_per_class:]:
                         if bbox[0] > 0:
                             tmp_bboxes.append(bbox)
@@ -193,13 +194,12 @@ class MergeBboxes(Unit):
                 if not self.ignore_negative and maxidx == 0:
                     continue
                 prob = probs[maxidx]
-                self.warning("prob %s" % prob)
+                self.warning(f"prob {prob}")
                 if prob >= self.last_chance_probability_threshold:
-                    self.info("prob %s" % prob)
-                    self.info("threshold %s" %
-                              self.last_chance_probability_threshold)
+                    self.info(f"prob {prob}")
+                    self.info(f"threshold {self.last_chance_probability_threshold}")
                     candidate_bboxes.append((maxidx, prob, bbox))
-            if len(candidate_bboxes) == 0:
+            if not candidate_bboxes:
                 for bbox, probs in sorted(self._bboxes.items()):
                     maxidx = numpy.argmax(probs)
                     if not self.ignore_negative and maxidx == 0:
@@ -220,7 +220,7 @@ class MergeBboxes(Unit):
                     max_prob_bbox = bbox
                 if prob >= self.probability_threshold:
                     winning_bboxes.append(bbox)
-            if len(winning_bboxes) == 0 and max_prob_bbox is not None:
+            if not winning_bboxes and max_prob_bbox is not None:
                 winning_bboxes.append(max_prob_bbox)
                 self.debug("%s: used last chance, %s", self._image,
                            max_prob_bbox)
@@ -241,14 +241,17 @@ class ImagenetForward(AcceleratedWorkflow):
         self.info("Importing %s...", root.imagenet_forward.trained_workflow)
         train_wf = SnapshotterToFile.import_(
             root.imagenet_forward.trained_workflow)
-        self.info("Loaded workflow %s" % train_wf)
+        self.info(f"Loaded workflow {train_wf}")
         gc.collect()
-        units_to_remove = []
-        for unit in train_wf:
-            if (not isinstance(unit, Forward) and
-                    not isinstance(unit, MeanDispNormalizer)):
-                units_to_remove.append(unit)
-        self.info("units_to_remove %s" % units_to_remove)
+        units_to_remove = [
+            unit
+            for unit in train_wf
+            if (
+                not isinstance(unit, Forward)
+                and not isinstance(unit, MeanDispNormalizer)
+            )
+        ]
+        self.info(f"units_to_remove {units_to_remove}")
         for unit in units_to_remove:
             unit.unlink_all()
             train_wf.del_ref(unit)
@@ -295,7 +298,7 @@ class ImagenetForward(AcceleratedWorkflow):
         self.forwards[0].link_attrs(self.meandispnorm, ("input", "output"))
 
         lc_probability_threshold = \
-            root.imagenet_forward.mergebboxes.last_chance_probability_threshold
+                root.imagenet_forward.mergebboxes.last_chance_probability_threshold
 
         pr_threshold = root.imagenet_forward.mergebboxes.probability_threshold
         labels_comp = root.imagenet_forward.mergebboxes.labels_compatibility
@@ -349,8 +352,10 @@ class ImagenetForward(AcceleratedWorkflow):
             self.loader.min_angle = min_angle_final
             self.loader.max_angle = max_angle_final
             self.loader.bboxes_file_name = root.imagenet_forward.result_path
-            shutil.copy(root.imagenet_forward.result_path,
-                        root.imagenet_forward.result_path + ".raw")
+            shutil.copy(
+                root.imagenet_forward.result_path,
+                f"{root.imagenet_forward.result_path}.raw",
+            )
             self.loader.reset()
             if self.loader.total == 0:
                 print("No bboxes for final stage - return")
@@ -372,17 +377,17 @@ def run(load, main):
     CACHED_DATA_FNME = os.path.join(root.imagenet_forward.imagenet_base,
                                     str(root.imagenet_forward.loader.year))
     root.imagenet_forward.loader.names_labels_filename = os.path.join(
-        CACHED_DATA_FNME, "original_labels_%s_%s_0_forward.pickle" %
-        (root.imagenet_forward.loader.year,
-         root.imagenet_forward.loader.series))
+        CACHED_DATA_FNME,
+        f"original_labels_{root.imagenet_forward.loader.year}_{root.imagenet_forward.loader.series}_0_forward.pickle",
+    )
     root.imagenet_forward.loader.samples_filename = os.path.join(
-        CACHED_DATA_FNME, "original_data_%s_%s_0_forward.dat" %
-        (root.imagenet_forward.loader.year,
-         root.imagenet_forward.loader.series))
+        CACHED_DATA_FNME,
+        f"original_data_{root.imagenet_forward.loader.year}_{root.imagenet_forward.loader.series}_0_forward.dat",
+    )
     root.imagenet_forward.loader.labels_int_dir = os.path.join(
-        CACHED_DATA_FNME, "labels_int_%s_%s_0.txt" %
-        (root.imagenet_forward.loader.year,
-         root.imagenet_forward.loader.series))
+        CACHED_DATA_FNME,
+        f"labels_int_{root.imagenet_forward.loader.year}_{root.imagenet_forward.loader.series}_0.txt",
+    )
     load(ImagenetForward)
     main(forward_mode=True,
          minibatch_size=root.imagenet_forward.loader.minibatch_size)

@@ -71,10 +71,7 @@ class Match(list):
 
     @property
     def has_forward(self):
-        for item in self:
-            if issubclass(item, ForwardBase):
-                return True
-        return False
+        return any(issubclass(item, ForwardBase) for item in self)
 
     @property
     def backwards(self):
@@ -87,24 +84,27 @@ class MatchingObject(UnitCommandLineArgumentsRegistry):
     mapping = defaultdict(Match)
     logger = logging.getLogger("Matcher")
 
-    def __init__(cls, name, bases, clsdict):
-        super(MatchingObject, cls).__init__(name, bases, clsdict)
+    def __init__(self, name, bases, clsdict):
+        super(MatchingObject, self).__init__(name, bases, clsdict)
         if not MatchingObject.enabled:
             return
         mapping = clsdict.get('MAPPING', None)
         if mapping is None:
-            MatchingObject.logger.warning("%s does not have MAPPING", cls)
+            MatchingObject.logger.warning("%s does not have MAPPING", self)
             return
         if not isinstance(mapping, set):
-            raise TypeError("%s: MAPPING must be of type 'set'" % cls)
+            raise TypeError(f"{self}: MAPPING must be of type 'set'")
         for val in mapping:
             match = MatchingObject.mapping[val]
-            if issubclass(cls, Forward) and match.has_forward and \
-                    cls != match.forward:
+            if (
+                issubclass(self, Forward)
+                and match.has_forward
+                and self != match.forward
+            ):
                 raise ValueError(
-                    "%s: attempted to add a second Forward %s to %s" %
-                    (val, cls, match.forward))
-            match.append(cls)
+                    f"{val}: attempted to add a second Forward {self} to {match.forward}"
+                )
+            match.append(self)
 
 
 @six.add_metaclass(MatchingObject)
@@ -167,8 +167,7 @@ class Forward(ForwardBase):
     @forward_mode.setter
     def forward_mode(self, value):
         if not isinstance(value, bool):
-            raise TypeError(
-                "forward_mode must be boolean (got %s)" % type(value))
+            raise TypeError(f"forward_mode must be boolean (got {type(value)})")
         self._forward_mode = value
 
     def initialize(self, device, **kwargs):
@@ -272,14 +271,11 @@ class FullyConnectedOutput(object):
         elif hasattr(value, "__iter__"):
             self._output_sample_shape = tuple(value)
         else:
-            raise TypeError("Unsupported output_sample_shape type: %s" %
-                            type(value))
+            raise TypeError(f"Unsupported output_sample_shape type: {type(value)}")
 
     @property
     def output_samples_number(self):
-        if self.input:
-            return self.input.shape[0]
-        return self._output_samples_number
+        return self.input.shape[0] if self.input else self._output_samples_number
 
     @output_samples_number.setter
     def output_samples_number(self, value):
@@ -444,9 +440,7 @@ class GradientDescentBase(AcceleratedUnit):
     @property
     def current_batch_size(self):
         batch_size = getattr(self, "batch_size", None)
-        if batch_size is None:
-            return self.err_output.mem.shape[0]
-        return int(batch_size)
+        return self.err_output.mem.shape[0] if batch_size is None else int(batch_size)
 
     def initialize(self, device, **kwargs):
         super(GradientDescentBase, self).initialize(device, **kwargs)
@@ -471,11 +465,11 @@ class GradientDescentBase(AcceleratedUnit):
                                                self.gradient_moment_bias)
 
         if self.need_gradient_weights and self.weights:
-            if not self.gradient_weights:
-                self.gradient_weights.reset(numpy.zeros_like(self.weights.mem))
-            else:
+            if self.gradient_weights:
                 assert self.gradient_weights.size == self.weights.size
 
+            else:
+                self.gradient_weights.reset(numpy.zeros_like(self.weights.mem))
         if (self.need_gradient_weights and self.weights and
                 self.accumulate_gradient):
             if not self.accumulated_gradient_weights:
@@ -492,7 +486,7 @@ class GradientDescentBase(AcceleratedUnit):
                     numpy.zeros_like(self.weights.mem))
             else:
                 assert self.gradient_weights_with_moment.size == \
-                    self.weights.size
+                        self.weights.size
 
         if (self.need_gradient_weights and self.include_bias and self.bias and
             (not self.gradient_bias or

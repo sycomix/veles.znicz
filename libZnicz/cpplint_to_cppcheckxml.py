@@ -12,13 +12,9 @@ import xml.sax.saxutils
 
 def cpplint_score_to_cppcheck_severity(score):
     # I'm making this up
-    if score == 1:
+    if score in [1, 2]:
         return 'style'
-    elif score == 2:
-        return 'style'
-    elif score == 3:
-        return 'warning'
-    elif score == 4:
+    elif score in [3, 4]:
         return 'warning'
     elif score == 5:
         return 'error'

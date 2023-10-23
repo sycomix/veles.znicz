@@ -173,11 +173,15 @@ class TestStandardWorkflow(StandardTest):
     @multi_device()
     def test_mcdnnic_topology_standard_workflow(self):
         for i in range(5):
-            self.info("Will test number %s" % i)
-            (mcdnnic_topology, mcdnnic_parameters, real_layers,
-             real_loader_params, kwargs) = getattr(
-                self, "set_parameters_%s" % i)()
-            if i == 1 or i == 3:
+            self.info(f"Will test number {i}")
+            (
+                mcdnnic_topology,
+                mcdnnic_parameters,
+                real_layers,
+                real_loader_params,
+                kwargs,
+            ) = getattr(self, f"set_parameters_{i}")()
+            if i in [1, 3]:
                 with self.assertRaises(ValueError):
                     self.run_and_assert(
                         mcdnnic_topology, mcdnnic_parameters,

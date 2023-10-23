@@ -92,8 +92,7 @@ class ApproximatorLoader(loader.FullBatchLoaderMSE):
                 array_value = mat_array[key]
                 break
         else:
-            raise ValueError(
-                "Could not find variable to import in %s" % (fnme))
+            raise ValueError(f"Could not find variable to import in {fnme}")
         data = numpy.zeros(array_value.shape, dtype=opencl_types.dtypes[
             root.common.engine.precision_type])
         data[:] = array_value[:]
@@ -120,12 +119,8 @@ class ApproximatorLoader(loader.FullBatchLoaderMSE):
                             % (len(raw_labels), len(raw_data), pathname))
                     labels.extend(raw_labels)
                 elif len(labels):
-                    raise ValueError(
-                        "Not labels found for %s" % pathname)
-                if data is None:
-                    data = raw_data
-                else:
-                    data = numpy.append(data, raw_data, axis=0)
+                    raise ValueError(f"Not labels found for {pathname}")
+                data = raw_data if data is None else numpy.append(data, raw_data, axis=0)
             self.class_lengths[index] = len(data) - offs
             offs = len(data)
 
@@ -155,8 +150,7 @@ class ApproximatorLoader(loader.FullBatchLoaderMSE):
 
         self.original_data.mem = data
 
-        targets = list(self.target_by_lbl.values())
-        if len(targets) > 0:
+        if targets := list(self.target_by_lbl.values()):
             shape = (len(self.original_data),) + targets[0].shape
             target = numpy.zeros(shape, dtype=targets[0].dtype)
             for i, label in enumerate(self.original_labels):

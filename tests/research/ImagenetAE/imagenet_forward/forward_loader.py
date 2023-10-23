@@ -307,7 +307,7 @@ class ImagenetForwardLoaderBbox(AcceleratedUnit, Processor):
         if self.add_sobel:
             s_img = numpy.zeros((tmp_height, tmp_width), dtype=numpy.uint8)
             gray_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY) \
-                if colors_num > 1 else img
+                    if colors_num > 1 else img
 
             # get results of Sobel filtration in x- and y-directions
             sobel_x = cv2.Sobel(gray_img, cv2.CV_32F, 1, 0, ksize=5)
@@ -316,8 +316,7 @@ class ImagenetForwardLoaderBbox(AcceleratedUnit, Processor):
             # join sobel_x and sobel_y and clip to uint8
             sobel = numpy.sqrt(numpy.square(sobel_x) + numpy.square(sobel_y))
             sobel -= sobel.min()
-            max_val = sobel.max()
-            if max_val:
+            if max_val := sobel.max():
                 sobel *= 255.0 / max_val
             sobel = numpy.clip(sobel, 0, 255).astype(numpy.uint8)
 
@@ -346,11 +345,10 @@ class ImagenetForwardLoaderBbox(AcceleratedUnit, Processor):
         if area < max(self.raw_bboxes_min_area,
                       imsize[0] * imsize[1] * self.raw_bboxes_min_area_ratio):
             return True
-        if min(width, height) < max(self.raw_bboxes_min_size,
-                                    numpy.min(imsize) *
-                                    self.raw_bboxes_min_size_ratio):
-            return True
-        return False
+        return min(width, height) < max(
+            self.raw_bboxes_min_size,
+            numpy.min(imsize) * self.raw_bboxes_min_size_ratio,
+        )
 
     def _next_state(self):
         if self._initial_state:

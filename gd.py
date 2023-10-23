@@ -339,7 +339,7 @@ class GradientDescent(nn_units.GradientDescentBase):
                         self.accumulated_gradient_weights,
                         self.gradient_weights_with_moment):
                 vec.map_write()
-            v_trans = getattr(self, s + "_transposed")
+            v_trans = getattr(self, f"{s}_transposed")
         elif s == 'bias':
             self.gradient_bias.map_read()
             for vec in (self.bias,
@@ -349,16 +349,16 @@ class GradientDescent(nn_units.GradientDescentBase):
             v_trans = False
 
         vec = getattr(self, s)
-        grad_vec = getattr(self, "gradient_" + s)
-        acc_vec = getattr(self, "accumulated_gradient_" + s)
-        vec_old = getattr(self, "gradient_%s_with_moment" % s)
+        grad_vec = getattr(self, f"gradient_{s}")
+        acc_vec = getattr(self, f"accumulated_gradient_{s}")
+        vec_old = getattr(self, f"gradient_{s}_with_moment")
         if "fast" in self.solvers:
             f_vec = getattr(self.fast, s)
         if "adagrad" in self.solvers:
             adagard_vec = getattr(self.adagrad, s)
         if "adadelta" in self.solvers:
             adadelta_vec = getattr(self.adadelta, s)
-            adadelta_gvec = getattr(self.adadelta, "g" + s)
+            adadelta_gvec = getattr(self.adadelta, f"g{s}")
 
         lr = self.learning_rate
         factor_l12 = self.weights_decay

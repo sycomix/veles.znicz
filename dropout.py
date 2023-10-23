@@ -123,10 +123,11 @@ class DropoutForward(Forward, Dropout):
         self._threshold_arg_ = numpy.empty(1, dtype=numpy.uint64)
         self._pass_arg_ = numpy.empty(1, dtype=self.input.dtype)
 
-        self.build_program({"OUTPUT_SIZE": self.input.size}, "%s_%s" %
-                           (self.__class__.__name__,
-                            "x".join(str(x) for x in self.input.shape)),
-                           dtype=self.input.dtype)
+        self.build_program(
+            {"OUTPUT_SIZE": self.input.size},
+            f'{self.__class__.__name__}_{"x".join(str(x) for x in self.input.shape)}',
+            dtype=self.input.dtype,
+        )
 
         self.assign_kernel("dropout_forward")
         self.set_args(self.input, self.device.skip(2), self.states, self.mask,
@@ -206,10 +207,11 @@ class DropoutBackward(GradientDescentBase, Dropout):
         super(DropoutBackward, self).initialize(device=device, **kwargs)
 
     def _gpu_init(self):
-        self.build_program({"OUTPUT_SIZE": self.err_output.size}, "%s_%s" %
-                           (self.__class__.__name__,
-                            "x".join(str(x) for x in self.err_input.shape)),
-                           dtype=self.err_output.mem.dtype)
+        self.build_program(
+            {"OUTPUT_SIZE": self.err_output.size},
+            f'{self.__class__.__name__}_{"x".join(str(x) for x in self.err_input.shape)}',
+            dtype=self.err_output.mem.dtype,
+        )
         self.assign_kernel("dropout_backward")
         self.set_args(self.mask, self.err_output, self.err_input)
 
@@ -255,12 +257,9 @@ class DropoutFixer(Unit):
         self.drops_ = None
 
     def initialize(self, **kwargs):
-        self.drops_ = []
-        for u in self.workflow:
-            if isinstance(u, DropoutForward):
-                self.drops_.append(u)
+        self.drops_ = [u for u in self.workflow if isinstance(u, DropoutForward)]
 
     def run(self):
-        mode = (not self.workflow.loader.minibatch_class == 2)
+        mode = self.workflow.loader.minibatch_class != 2
         for u in self.drops_:
             u.forward_mode = mode

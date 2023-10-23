@@ -75,6 +75,7 @@ We do a small hack, which is to ignore //'s with "'s after them on the
 same line, but it is far from perfect (in either direction).
 """
 
+
 import codecs
 import copy
 import getopt
@@ -280,20 +281,20 @@ _CHECK_REPLACEMENT = dict([(m, {}) for m in _CHECK_MACROS])
 for op, replacement in [('==', 'EQ'), ('!=', 'NE'),
                         ('>=', 'GE'), ('>', 'GT'),
                         ('<=', 'LE'), ('<', 'LT')]:
-  _CHECK_REPLACEMENT['DCHECK'][op] = 'DCHECK_%s' % replacement
-  _CHECK_REPLACEMENT['CHECK'][op] = 'CHECK_%s' % replacement
-  _CHECK_REPLACEMENT['EXPECT_TRUE'][op] = 'EXPECT_%s' % replacement
-  _CHECK_REPLACEMENT['ASSERT_TRUE'][op] = 'ASSERT_%s' % replacement
-  _CHECK_REPLACEMENT['EXPECT_TRUE_M'][op] = 'EXPECT_%s_M' % replacement
-  _CHECK_REPLACEMENT['ASSERT_TRUE_M'][op] = 'ASSERT_%s_M' % replacement
+  _CHECK_REPLACEMENT['DCHECK'][op] = f'DCHECK_{replacement}'
+  _CHECK_REPLACEMENT['CHECK'][op] = f'CHECK_{replacement}'
+  _CHECK_REPLACEMENT['EXPECT_TRUE'][op] = f'EXPECT_{replacement}'
+  _CHECK_REPLACEMENT['ASSERT_TRUE'][op] = f'ASSERT_{replacement}'
+  _CHECK_REPLACEMENT['EXPECT_TRUE_M'][op] = f'EXPECT_{replacement}_M'
+  _CHECK_REPLACEMENT['ASSERT_TRUE_M'][op] = f'ASSERT_{replacement}_M'
 
 for op, inv_replacement in [('==', 'NE'), ('!=', 'EQ'),
                             ('>=', 'LT'), ('>', 'LE'),
                             ('<=', 'GT'), ('<', 'GE')]:
-  _CHECK_REPLACEMENT['EXPECT_FALSE'][op] = 'EXPECT_%s' % inv_replacement
-  _CHECK_REPLACEMENT['ASSERT_FALSE'][op] = 'ASSERT_%s' % inv_replacement
-  _CHECK_REPLACEMENT['EXPECT_FALSE_M'][op] = 'EXPECT_%s_M' % inv_replacement
-  _CHECK_REPLACEMENT['ASSERT_FALSE_M'][op] = 'ASSERT_%s_M' % inv_replacement
+  _CHECK_REPLACEMENT['EXPECT_FALSE'][op] = f'EXPECT_{inv_replacement}'
+  _CHECK_REPLACEMENT['ASSERT_FALSE'][op] = f'ASSERT_{inv_replacement}'
+  _CHECK_REPLACEMENT['EXPECT_FALSE_M'][op] = f'EXPECT_{inv_replacement}_M'
+  _CHECK_REPLACEMENT['ASSERT_FALSE_M'][op] = f'ASSERT_{inv_replacement}_M'
 
 # Alternative tokens and their replacements.  For full list, see section 2.5
 # Alternative tokens [lex.digraph] in the C++ standard.
@@ -370,20 +371,22 @@ def ParseNolintSuppressions(filename, raw_line, linenum, error):
     linenum: int, the number of the current line.
     error: function, an error handler.
   """
-  # FIXME(adonovan): "NOLINT(" is misparsed as NOLINT(*).
-  matched = _RE_SUPPRESSION.search(raw_line)
-  if matched:
+  if matched := _RE_SUPPRESSION.search(raw_line):
     category = matched.group(1)
     if category in (None, '(*)'):  # => "suppress all"
       _error_suppressions.setdefault(None, set()).add(linenum)
-    else:
-      if category.startswith('(') and category.endswith(')'):
-        category = category[1:-1]
-        if category in _ERROR_CATEGORIES:
-          _error_suppressions.setdefault(category, set()).add(linenum)
-        else:
-          error(filename, linenum, 'readability/nolint', 5,
-                'Unknown NOLINT error category: %s' % category)
+    elif category.startswith('(') and category.endswith(')'):
+      category = category[1:-1]
+      if category in _ERROR_CATEGORIES:
+        _error_suppressions.setdefault(category, set()).add(linenum)
+      else:
+        error(
+            filename,
+            linenum,
+            'readability/nolint',
+            5,
+            f'Unknown NOLINT error category: {category}',
+        )
 
 
 def ResetNolintSuppressions():
@@ -411,14 +414,14 @@ def Match(pattern, s):
   # The regexp compilation caching is inlined in both Match and Search for
   # performance reasons; factoring it out into a separate function turns out
   # to be noticeably expensive.
-  if not pattern in _regexp_compile_cache:
+  if pattern not in _regexp_compile_cache:
     _regexp_compile_cache[pattern] = sre_compile.compile(pattern)
   return _regexp_compile_cache[pattern].match(s)
 
 
 def Search(pattern, s):
   """Searches the string for the pattern, caching the compiled regexp."""
-  if not pattern in _regexp_compile_cache:
+  if pattern not in _regexp_compile_cache:
     _regexp_compile_cache[pattern] = sre_compile.compile(pattern)
   return _regexp_compile_cache[pattern].search(s)
 
@@ -508,9 +511,7 @@ class _IncludeState(dict):
       error message describing what's wrong.
 
     """
-    error_message = ('Found %s after %s' %
-                     (self._TYPE_NAMES[header_type],
-                      self._SECTION_NAMES[self._section]))
+    error_message = f'Found {self._TYPE_NAMES[header_type]} after {self._SECTION_NAMES[self._section]}'
 
     last_section = self._section
 
@@ -595,8 +596,7 @@ class _CppLintState(object):
     # Default filters always have less priority than the flag ones.
     self.filters = _DEFAULT_FILTERS[:]
     for filt in filters.split(','):
-      clean_filt = filt.strip()
-      if clean_filt:
+      if clean_filt := filt.strip():
         self.filters.append(clean_filt)
     for filt in self.filters:
       if not (filt.startswith('+') or filt.startswith('-')):
@@ -714,8 +714,7 @@ class _FunctionState(object):
     if self.lines_in_function > trigger:
       error_level = int(math.log(self.lines_in_function / base_trigger, 2))
       # 50 => 0, 100 => 1, 200 => 2, 400 => 3, 800 => 4, 1600 => 5, ...
-      if error_level > 5:
-        error_level = 5
+      error_level = min(error_level, 5)
       error(filename, linenum, 'readability/fn_size', error_level,
             'Small and focused functions are preferred:'
             ' %s has %d non-comment lines'
@@ -817,7 +816,7 @@ class FileInfo:
 
   def NoExtension(self):
     """File has no source file extension."""
-    return '/'.join(self.Split()[0:2])
+    return '/'.join(self.Split()[:2])
 
   def IsSource(self):
     """File has a source file extension."""
@@ -845,10 +844,7 @@ def _ShouldPrintError(category, confidence, linenum):
         is_filtered = False
     else:
       assert False  # should have been checked for in SetFilter.
-  if is_filtered:
-    return False
-
-  return True
+  return not is_filtered
 
 
 def Error(filename, linenum, category, confidence, message):
@@ -1075,10 +1071,12 @@ def CloseExpression(clean_lines, linenum, pos):
   startchar = line[pos]
   if startchar not in '({[':
     return (line, clean_lines.NumLines(), -1)
-  if startchar == '(': endchar = ')'
-  if startchar == '[': endchar = ']'
-  if startchar == '{': endchar = '}'
-
+  if startchar == '(':
+    endchar = ')'
+  elif startchar == '[':
+    endchar = ']'
+  elif startchar == '{':
+    endchar = '}'
   # Check first line
   end_pos = FindEndOfExpressionInLine(line, pos, 0, startchar, endchar)
   if end_pos > -1:
@@ -1130,7 +1128,7 @@ def GetHeaderGuardCPPVariable(filename):
   fileinfo = FileInfo(filename)
   file_path_from_root = fileinfo.RepositoryName()
   if _root:
-    file_path_from_root = re.sub('^' + _root + os.sep, '', file_path_from_root)
+    file_path_from_root = re.sub(f'^{_root}{os.sep}', '', file_path_from_root)
   return re.sub(r'[-./\s]', '_', file_path_from_root).upper() + '_'
 
 
@@ -1169,28 +1167,41 @@ def CheckForHeaderGuard(filename, lines, error):
       endif_linenum = linenum
 
   if not ifndef:
-    error(filename, 0, 'build/header_guard', 5,
-          'No #ifndef header guard found, suggested CPP variable is: %s' %
-          cppvar)
+    error(
+        filename,
+        0,
+        'build/header_guard',
+        5,
+        f'No #ifndef header guard found, suggested CPP variable is: {cppvar}',
+    )
     return
 
   if not define:
-    error(filename, 0, 'build/header_guard', 5,
-          'No #define header guard found, suggested CPP variable is: %s' %
-          cppvar)
+    error(
+        filename,
+        0,
+        'build/header_guard',
+        5,
+        f'No #define header guard found, suggested CPP variable is: {cppvar}',
+    )
     return
 
   # The guard should be PATH_FILE_H_, but we also allow PATH_FILE_H__
   # for backward compatibility.
   if ifndef != cppvar:
     error_level = 0
-    if ifndef != cppvar + '_':
+    if ifndef != f'{cppvar}_':
       error_level = 5
 
     ParseNolintSuppressions(filename, lines[ifndef_linenum], ifndef_linenum,
                             error)
-    error(filename, ifndef_linenum, 'build/header_guard', error_level,
-          '#ifndef header guard has wrong style, please use: %s' % cppvar)
+    error(
+        filename,
+        ifndef_linenum,
+        'build/header_guard',
+        error_level,
+        f'#ifndef header guard has wrong style, please use: {cppvar}',
+    )
 
   if define != ifndef:
     error(filename, 0, 'build/header_guard', 5,
@@ -1198,15 +1209,17 @@ def CheckForHeaderGuard(filename, lines, error):
           cppvar)
     return
 
-  if endif != ('#endif  // %s' % cppvar):
-    error_level = 0
-    if endif != ('#endif  // %s' % (cppvar + '_')):
-      error_level = 5
-
+  if endif != f'#endif  // {cppvar}':
+    error_level = 5 if endif != f'#endif  // {cppvar}_' else 0
     ParseNolintSuppressions(filename, lines[endif_linenum], endif_linenum,
                             error)
-    error(filename, endif_linenum, 'build/header_guard', error_level,
-          '#endif line should be "#endif  // %s"' % cppvar)
+    error(
+        filename,
+        endif_linenum,
+        'build/header_guard',
+        error_level,
+        f'#endif line should be "#endif  // {cppvar}"',
+    )
 
 
 def CheckForUnicodeReplacementCharacters(filename, lines, error):
@@ -1321,10 +1334,13 @@ def CheckPosixThreading(filename, clean_lines, linenum, error):
     # Comparisons made explicit for clarity -- pylint: disable-msg=C6403
     if ix >= 0 and (ix == 0 or (not line[ix - 1].isalnum() and
                                 line[ix - 1] not in ('_', '.', '>'))):
-      error(filename, linenum, 'runtime/threadsafe_fn', 2,
-            'Consider using ' + multithread_safe_function +
-            '...) instead of ' + single_thread_function +
-            '...) for improved thread safety.')
+      error(
+          filename,
+          linenum,
+          'runtime/threadsafe_fn',
+          2,
+          f'Consider using {multithread_safe_function}...) instead of {single_thread_function}...) for improved thread safety.',
+      )
 
 
 # Matches invalid increment: *count++, which moves pointer instead of
@@ -1400,11 +1416,7 @@ class _ClassInfo(_BlockInfo):
     self.name = name
     self.starting_linenum = linenum
     self.is_derived = False
-    if class_or_struct == 'struct':
-      self.access = 'public'
-    else:
-      self.access = 'private'
-
+    self.access = 'public' if class_or_struct == 'struct' else 'private'
     # Try to find the end of the class.  This will be confused by things like:
     #   class A {
     #   } *x = { ...
@@ -1469,14 +1481,16 @@ class _NamespaceInfo(_BlockInfo):
       if not Match((r'};*\s*(//|/\*).*\bnamespace\s+' + re.escape(self.name) +
                     r'[\*/\.\\\s]*$'),
                    line):
-        error(filename, linenum, 'readability/namespace', 5,
-              'Namespace should be terminated with "// namespace %s"' %
-              self.name)
-    else:
-      # Anonymous namespace
-      if not Match(r'};*\s*(//|/\*).*\bnamespace[\*/\.\\\s]*$', line):
-        error(filename, linenum, 'readability/namespace', 5,
-              'Namespace should be terminated with "// namespace"')
+        error(
+            filename,
+            linenum,
+            'readability/namespace',
+            5,
+            f'Namespace should be terminated with "// namespace {self.name}"',
+        )
+    elif not Match(r'};*\s*(//|/\*).*\bnamespace[\*/\.\\\s]*$', line):
+      error(filename, linenum, 'readability/namespace', 5,
+            'Namespace should be terminated with "// namespace"')
 
 
 class _PreprocessorInfo(object):
@@ -1563,9 +1577,6 @@ class _NestingState(object):
 
         # Restore the stack to how it was before the #if
         self.stack = copy.deepcopy(self.pp_stack[-1].stack_before_if)
-      else:
-        # TODO(unknown): unexpected #else, issue warning?
-        pass
     elif Match(r'^\s*#\s*endif\b', line):
       # End of #if or #else blocks.
       if self.pp_stack:
@@ -1578,9 +1589,6 @@ class _NestingState(object):
           self.stack = self.pp_stack[-1].stack_before_else
         # Drop the corresponding #if
         self.pp_stack.pop()
-      else:
-        # TODO(unknown): unexpected #endif, issue warning?
-        pass
 
   def Update(self, filename, clean_lines, linenum, error):
     """Update nesting state with current line.
@@ -1676,10 +1684,8 @@ class _NestingState(object):
     if not self.SeenOpenBrace():
       self.stack[-1].CheckBegin(filename, clean_lines, linenum, error)
 
-    # Update access control if we are inside a class/struct
-    if self.stack and isinstance(self.stack[-1], _ClassInfo):
-      access_match = Match(r'\s*(public|private|protected)\s*:', line)
-      if access_match:
+    if access_match := Match(r'\s*(public|private|protected)\s*:', line):
+      if self.stack and isinstance(self.stack[-1], _ClassInfo):
         self.stack[-1].access = access_match.group(1)
 
     # Consume braces or semicolons from what's left of the line
@@ -1694,13 +1700,13 @@ class _NestingState(object):
         # If namespace or class hasn't seen a opening brace yet, mark
         # namespace/class head as complete.  Push a new block onto the
         # stack otherwise.
-        if not self.SeenOpenBrace():
-          self.stack[-1].seen_open_brace = True
-        else:
+        if self.SeenOpenBrace():
           self.stack.append(_BlockInfo(True))
           if _MATCH_ASM.match(line):
             self.stack[-1].inline_asm = _BLOCK_ASM
-      elif token == ';' or token == ')':
+        else:
+          self.stack[-1].seen_open_brace = True
+      elif token in [';', ')']:
         # If we haven't seen an opening brace yet, but we already saw
         # a semicolon, this is probably a forward declaration.  Pop
         # the stack for these.
@@ -1711,11 +1717,9 @@ class _NestingState(object):
         # Also pop these stack for these.
         if not self.SeenOpenBrace():
           self.stack.pop()
-      else:  # token == '}'
-        # Perform end of block checks and pop the stack.
-        if self.stack:
-          self.stack[-1].CheckEnd(filename, clean_lines, linenum, error)
-          self.stack.pop()
+      elif self.stack:
+        self.stack[-1].CheckEnd(filename, clean_lines, linenum, error)
+        self.stack.pop()
       line = matched.group(2)
 
   def InnermostClass(self):
@@ -1743,9 +1747,13 @@ class _NestingState(object):
     # cpplint_unittest.py for an example of this.
     for obj in self.stack:
       if isinstance(obj, _ClassInfo):
-        error(filename, obj.starting_linenum, 'build/class', 5,
-              'Failed to find complete declaration of class %s' %
-              obj.name)
+        error(
+            filename,
+            obj.starting_linenum,
+            'build/class',
+            5,
+            f'Failed to find complete declaration of class {obj.name}',
+        )
 
 
 def CheckForNonStandardConstructs(filename, clean_lines, linenum,
@@ -1874,8 +1882,7 @@ def CheckSpacingForFunctionCall(filename, line, linenum, error):
                   r'\bfor\s*\((.*)\)\s*{',
                   r'\bwhile\s*\((.*)\)\s*[{;]',
                   r'\bswitch\s*\((.*)\)\s*{'):
-    match = Search(pattern, line)
-    if match:
+    if match := Search(pattern, line):
       fncall = match.group(1)    # look inside the parens for function calls
       break
 
@@ -1964,12 +1971,9 @@ def CheckForFunctionLengths(filename, clean_lines, linenum,
   line = lines[linenum]
   raw = clean_lines.raw_lines
   raw_line = raw[linenum]
-  joined_line = ''
-
   starting_func = False
   regexp = r'(\w(\w|::|\*|\&|\s)*)\('  # decls * & space::name( ...
-  match_result = Match(regexp, line)
-  if match_result:
+  if match_result := Match(regexp, line):
     # If the name is all caps and underscores, figure it's a macro and
     # ignore it, unless it's TEST or TEST_F.
     function_name = match_result.group(1).split()[-1]
@@ -1979,9 +1983,11 @@ def CheckForFunctionLengths(filename, clean_lines, linenum,
 
   if starting_func:
     body_found = False
+    joined_line = ''
+
     for start_linenum in xrange(linenum, clean_lines.NumLines()):
       start_line = lines[start_linenum]
-      joined_line += ' ' + start_line.lstrip()
+      joined_line += f' {start_line.lstrip()}'
       if Search(r'(;|})', start_line):  # Declarations and trivial functions
         body_found = True
         break                              # ... ignore
@@ -1989,8 +1995,7 @@ def CheckForFunctionLengths(filename, clean_lines, linenum,
         body_found = True
         function = Search(r'((\w|:)*)\(', line).group(1)
         if Match(r'TEST', function):    # Handle TEST... macros
-          parameter_regexp = Search(r'(\(.*\))', joined_line)
-          if parameter_regexp:             # Ignore bad syntax
+          if parameter_regexp := Search(r'(\(.*\))', joined_line):
             function += parameter_regexp.group(1)
         else:
           function += '()'
@@ -2019,25 +2024,25 @@ def CheckComment(comment, filename, linenum, error):
     linenum: The number of the line to check.
     error: The function to call with any errors found.
   """
-  match = _RE_PATTERN_TODO.match(comment)
-  if match:
-    # One whitespace is correct; zero whitespace is handled elsewhere.
-    leading_whitespace = match.group(1)
-    if len(leading_whitespace) > 1:
-      error(filename, linenum, 'whitespace/todo', 2,
-            'Too many spaces before TODO')
+  if not (match := _RE_PATTERN_TODO.match(comment)):
+    return
+  # One whitespace is correct; zero whitespace is handled elsewhere.
+  leading_whitespace = match.group(1)
+  if len(leading_whitespace) > 1:
+    error(filename, linenum, 'whitespace/todo', 2,
+          'Too many spaces before TODO')
 
-    username = match.group(2)
-    if not username:
-      error(filename, linenum, 'readability/todo', 2,
-            'Missing username in TODO; it should look like '
-            '"// TODO(my_username): Stuff."')
+  username = match.group(2)
+  if not username:
+    error(filename, linenum, 'readability/todo', 2,
+          'Missing username in TODO; it should look like '
+          '"// TODO(my_username): Stuff."')
 
-    middle_whitespace = match.group(3)
+  middle_whitespace = match.group(3)
     # Comparisons made explicit for correctness -- pylint: disable-msg=C6403
-    if middle_whitespace != ' ' and middle_whitespace != '':
-      error(filename, linenum, 'whitespace/todo', 2,
-            'TODO(my_username) should be followed by a space')
+  if middle_whitespace not in [' ', '']:
+    error(filename, linenum, 'whitespace/todo', 2,
+          'TODO(my_username) should be followed by a space')
 
 def CheckAccess(filename, clean_lines, linenum, nesting_state, error):
   """Checks for improper use of DISALLOW* macros.
@@ -2059,15 +2064,13 @@ def CheckAccess(filename, clean_lines, linenum, nesting_state, error):
     return
   if nesting_state.stack and isinstance(nesting_state.stack[-1], _ClassInfo):
     if nesting_state.stack[-1].access != 'private':
-      error(filename, linenum, 'readability/constructors', 3,
-            '%s must be in the private: section' % matched.group(1))
-
-  else:
-    # Found DISALLOW* macro outside a class declaration, or perhaps it
-    # was used inside a function when it should have been part of the
-    # class declaration.  We could issue a warning here, but it
-    # probably resulted in a compiler error already.
-    pass
+      error(
+          filename,
+          linenum,
+          'readability/constructors',
+          3,
+          f'{matched.group(1)} must be in the private: section',
+      )
 
 
 def FindNextMatchingAngleBracket(clean_lines, linenum, init_suffix):
@@ -2084,17 +2087,7 @@ def FindNextMatchingAngleBracket(clean_lines, linenum, init_suffix):
   line = init_suffix
   nesting_stack = ['<']
   while True:
-    # Find the next operator that can tell us whether < is used as an
-    # opening bracket or as a less-than operator.  We only want to
-    # warn on the latter case.
-    #
-    # We could also check all other operators and terminate the search
-    # early, e.g. if we got something like this "a<b+c", the "<" is
-    # most likely a less-than operator, but then we will get false
-    # positives for default arguments (e.g. http://go/prccd) and
-    # other template expressions (e.g. http://go/oxcjq).
-    match = Search(r'^[^<>(),;\[\]]*([<>(),;\[\]])(.*)$', line)
-    if match:
+    if match := Search(r'^[^<>(),;\[\]]*([<>(),;\[\]])(.*)$', line):
       # Found an operator, update nesting stack
       operator = match.group(1)
       line = match.group(2)
@@ -2118,14 +2111,12 @@ def FindNextMatchingAngleBracket(clean_lines, linenum, init_suffix):
           # Got some other operator.
           return False
 
-      else:
-        # Expecting closing parenthesis or closing bracket
-        if operator in ('<', '(', '['):
-          nesting_stack.append(operator)
-        elif operator in (')', ']'):
-          # We don't bother checking for matching () or [].  If we got
-          # something like (] or [), it would have been a syntax error.
-          nesting_stack.pop()
+      elif operator in ('<', '(', '['):
+        nesting_stack.append(operator)
+      elif operator in (')', ']'):
+        # We don't bother checking for matching () or [].  If we got
+        # something like (] or [), it would have been a syntax error.
+        nesting_stack.pop()
 
     else:
       # Scan the next line
@@ -2154,9 +2145,7 @@ def FindPreviousMatchingAngleBracket(clean_lines, linenum, init_prefix):
   line = init_prefix
   nesting_stack = ['>']
   while True:
-    # Find the previous operator
-    match = Search(r'^(.*)([<>(),;\[\]])[^<>(),;\[\]]*$', line)
-    if match:
+    if match := Search(r'^(.*)([<>(),;\[\]])[^<>(),;\[\]]*$', line):
       # Found an operator, update nesting stack
       operator = match.group(2)
       line = match.group(1)
@@ -2179,12 +2168,10 @@ def FindPreviousMatchingAngleBracket(clean_lines, linenum, init_prefix):
           # Got some other operator.
           return False
 
-      else:
-        # Expecting opening parenthesis or opening bracket
-        if operator in ('>', ')', ']'):
-          nesting_stack.append(operator)
-        elif operator in ('(', '['):
-          nesting_stack.pop()
+      elif operator in ('>', ')', ']'):
+        nesting_stack.append(operator)
+      elif operator in ('(', '['):
+        nesting_stack.pop()
 
     else:
       # Scan the previous line
@@ -2286,10 +2273,14 @@ def CheckSpacing(filename, clean_lines, linenum, nesting_state, error):
         error(filename, linenum, 'whitespace/blank_line', 3,
               'Blank line at the end of a code block.  Is this needed?')
 
-    matched = Match(r'\s*(public|protected|private):', prev_line)
-    if matched:
-      error(filename, linenum, 'whitespace/blank_line', 3,
-            'Do not leave a blank line after "%s:"' % matched.group(1))
+    if matched := Match(r'\s*(public|protected|private):', prev_line):
+      error(
+          filename,
+          linenum,
+          'whitespace/blank_line',
+          3,
+          f'Do not leave a blank line after "{matched.group(1)}:"',
+      )
 
   # Next, we complain if there's a comment too near the text
   commentpos = line.find('//')
@@ -2308,7 +2299,7 @@ def CheckSpacing(filename, clean_lines, linenum, nesting_state, error):
               'At least two spaces is best between code and comments')
       # There should always be a space between the // and the comment
       commentend = commentpos + 2
-      if commentend < len(line) and not line[commentend] == ' ':
+      if commentend < len(line) and line[commentend] != ' ':
         # but some lines are exceptions -- e.g. if they're big
         # comment delimiters like:
         # //----------------------------------------------------------
@@ -2347,12 +2338,17 @@ def CheckSpacing(filename, clean_lines, linenum, nesting_state, error):
   # check non-include lines for spacing around < and >.
   match = Search(r'[^<>=!\s](==|!=|<=|>=)[^<>=!\s]', line)
   if match:
-    error(filename, linenum, 'whitespace/operators', 3,
-          'Missing spaces around %s' % match.group(1))
+    error(
+        filename,
+        linenum,
+        'whitespace/operators',
+        3,
+        f'Missing spaces around {match.group(1)}',
+    )
   # We allow no-spaces around << when used like this: 10<<20, but
   # not otherwise (particularly, not when used as streams)
   match = Search(r'(\S)(?:L|UL|ULL|l|ul|ull)?<<(\S)', line)
-  if match and not (match.group(1).isdigit() and match.group(2).isdigit()):
+  if match and (not match.group(1).isdigit() or not match.group(2).isdigit()):
     error(filename, linenum, 'whitespace/operators', 3,
           'Missing spaces around <<')
   elif not Match(r'#.*include', line):
@@ -2379,54 +2375,50 @@ def CheckSpacing(filename, clean_lines, linenum, nesting_state, error):
       error(filename, linenum, 'whitespace/operators', 3,
             'Missing spaces around >')
 
-  # We allow no-spaces around >> for almost anything.  This is because
-  # C++11 allows ">>" to close nested templates, which accounts for
-  # most cases when ">>" is not followed by a space.
-  #
-  # We still warn on ">>" followed by alpha character, because that is
-  # likely due to ">>" being used for right shifts, e.g.:
-  #   value >> alpha
-  #
-  # When ">>" is used to close templates, the alphanumeric letter that
-  # follows would be part of an identifier, and there should still be
-  # a space separating the template type and the identifier.
-  #   type<type<type>> alpha
-  match = Search(r'>>[a-zA-Z_]', line)
-  if match:
+  if match := Search(r'>>[a-zA-Z_]', line):
     error(filename, linenum, 'whitespace/operators', 3,
           'Missing spaces around >>')
 
-  # There shouldn't be space around unary operators
-  match = Search(r'(!\s|~\s|[\s]--[\s;]|[\s]\+\+[\s;])', line)
-  if match:
-    error(filename, linenum, 'whitespace/operators', 4,
-          'Extra space for operator %s' % match.group(1))
+  if match := Search(r'(!\s|~\s|[\s]--[\s;]|[\s]\+\+[\s;])', line):
+    error(
+        filename,
+        linenum,
+        'whitespace/operators',
+        4,
+        f'Extra space for operator {match.group(1)}',
+    )
 
-  # A pet peeve of mine: no spaces after an if, while, switch, or for
-  match = Search(r' (if\(|for\(|while\(|switch\()', line)
-  if match:
-    error(filename, linenum, 'whitespace/parens', 5,
-          'Missing space before ( in %s' % match.group(1))
+  if match := Search(r' (if\(|for\(|while\(|switch\()', line):
+    error(
+        filename,
+        linenum,
+        'whitespace/parens',
+        5,
+        f'Missing space before ( in {match.group(1)}',
+    )
 
-  # For if/for/while/switch, the left and right parens should be
-  # consistent about how many spaces are inside the parens, and
-  # there should either be zero or one spaces inside the parens.
-  # We don't want: "if ( foo)" or "if ( foo   )".
-  # Exception: "for ( ; foo; bar)" and "for (foo; bar; )" are allowed.
-  match = Search(r'\b(if|for|while|switch)\s*'
-                 r'\(([ ]*)(.).*[^ ]+([ ]*)\)\s*{\s*$',
-                 line)
-  if match:
+  if match := Search(
+      r'\b(if|for|while|switch)\s*'
+      r'\(([ ]*)(.).*[^ ]+([ ]*)\)\s*{\s*$', line):
     if len(match.group(2)) != len(match.group(4)):
-      if not (match.group(3) == ';' and
-              len(match.group(2)) == 1 + len(match.group(4)) or
-              not match.group(2) and Search(r'\bfor\s*\(.*; \)', line)):
-        error(filename, linenum, 'whitespace/parens', 5,
-              'Mismatching spaces inside () in %s' % match.group(1))
-    if not len(match.group(2)) in [0, 1]:
-      error(filename, linenum, 'whitespace/parens', 5,
-            'Should have zero or one spaces inside ( and ) in %s' %
-            match.group(1))
+      if (match.group(3) != ';'
+          or len(match.group(2)) != 1 + len(match.group(4))) and (
+              match.group(2) or not Search(r'\bfor\s*\(.*; \)', line)):
+        error(
+            filename,
+            linenum,
+            'whitespace/parens',
+            5,
+            f'Mismatching spaces inside () in {match.group(1)}',
+        )
+    if len(match.group(2)) not in {0, 1}:
+      error(
+          filename,
+          linenum,
+          'whitespace/parens',
+          5,
+          f'Should have zero or one spaces inside ( and ) in {match.group(1)}',
+      )
 
   # You should always have a space after a comma (either as fn arg or operator)
   if Search(r',[^\s]', line):
@@ -2514,8 +2506,8 @@ def CheckSectionSpacing(filename, clean_lines, class_info, linenum, error):
       linenum <= class_info.starting_linenum):
     return
 
-  matched = Match(r'\s*(public|protected|private):', clean_lines.lines[linenum])
-  if matched:
+  if matched := Match(r'\s*(public|protected|private):',
+                      clean_lines.lines[linenum]):
     # Issue warning if the line before public/protected/private was
     # not a blank line, but don't do this if the previous line contains
     # "class" or "struct".  This can happen two ways:
@@ -2528,18 +2520,19 @@ def CheckSectionSpacing(filename, clean_lines, class_info, linenum, error):
     if (not IsBlankLine(prev_line) and
         not Search(r'\b(class|struct)\b', prev_line) and
         not Search(r'\\$', prev_line)):
-      # Try a bit harder to find the beginning of the class.  This is to
-      # account for multi-line base-specifier lists, e.g.:
-      #   class Derived
-      #       : public Base {
-      end_class_head = class_info.starting_linenum
-      for i in range(class_info.starting_linenum, linenum):
-        if Search(r'\{\s*$', clean_lines.lines[i]):
-          end_class_head = i
-          break
+      end_class_head = next(
+          (i for i in range(class_info.starting_linenum, linenum)
+           if Search(r'\{\s*$', clean_lines.lines[i])),
+          class_info.starting_linenum,
+      )
       if end_class_head < linenum - 1:
-        error(filename, linenum, 'whitespace/blank_line', 3,
-              '"%s:" should be preceded by a blank line' % matched.group(1))
+        error(
+            filename,
+            linenum,
+            'whitespace/blank_line',
+            3,
+            f'"{matched.group(1)}:" should be preceded by a blank line',
+        )
 
 
 def GetPreviousNonBlankLine(clean_lines, linenum):
@@ -2715,11 +2708,11 @@ def CheckCheck(filename, clean_lines, linenum, error):
 
   # Decide the set of replacement macros that should be suggested
   raw_lines = clean_lines.raw_lines
-  current_macro = ''
-  for macro in _CHECK_MACROS:
-    if raw_lines[linenum].find(macro) >= 0:
-      current_macro = macro
-      break
+  current_macro = next(
+      (macro
+       for macro in _CHECK_MACROS if raw_lines[linenum].find(macro) >= 0),
+      '',
+  )
   if not current_macro:
     # Don't waste time here if line doesn't contain 'CHECK' or 'EXPECT'
     return
@@ -2729,10 +2722,13 @@ def CheckCheck(filename, clean_lines, linenum, error):
   # Encourage replacing plain CHECKs with CHECK_EQ/CHECK_NE/etc.
   for operator in ['==', '!=', '>=', '>', '<=', '<']:
     if ReplaceableCheck(operator, current_macro, line):
-      error(filename, linenum, 'readability/check', 2,
-            'Consider using %s instead of %s(a %s b)' % (
-                _CHECK_REPLACEMENT[current_macro][operator],
-                current_macro, operator))
+      error(
+          filename,
+          linenum,
+          'readability/check',
+          2,
+          f'Consider using {_CHECK_REPLACEMENT[current_macro][operator]} instead of {current_macro}(a {operator} b)',
+      )
       break
 
 
@@ -2763,9 +2759,13 @@ def CheckAltTokens(filename, clean_lines, linenum, error):
     return
 
   for match in _ALT_TOKEN_REPLACEMENT_PATTERN.finditer(line):
-    error(filename, linenum, 'readability/alt_tokens', 2,
-          'Use operator %s instead of %s' % (
-              _ALT_TOKEN_REPLACEMENT[match.group(1)], match.group(1)))
+    error(
+        filename,
+        linenum,
+        'readability/alt_tokens',
+        2,
+        f'Use operator {_ALT_TOKEN_REPLACEMENT[match.group(1)]} instead of {match.group(1)}',
+    )
 
 
 def GetLineWidth(line):
@@ -2778,16 +2778,15 @@ def GetLineWidth(line):
     The width of the line in column positions, accounting for Unicode
     combining characters and wide characters.
   """
-  if isinstance(line, unicode):
-    width = 0
-    for uc in unicodedata.normalize('NFC', line):
-      if unicodedata.east_asian_width(uc) in ('W', 'F'):
-        width += 2
-      elif not unicodedata.combining(uc):
-        width += 1
-    return width
-  else:
+  if not isinstance(line, unicode):
     return len(line)
+  width = 0
+  for uc in unicodedata.normalize('NFC', line):
+    if unicodedata.east_asian_width(uc) in ('W', 'F'):
+      width += 2
+    elif not unicodedata.combining(uc):
+      width += 1
+  return width
 
 
 def CheckStyle(filename, clean_lines, linenum, file_extension, nesting_state,
@@ -2834,13 +2833,10 @@ def CheckStyle(filename, clean_lines, linenum, file_extension, nesting_state,
   if line and line[-1].isspace():
     error(filename, linenum, 'whitespace/end_of_line', 4,
           'Line ends in whitespace.  Consider deleting these extra spaces.')
-  # There are certain situations we allow one space, notably for labels
-  elif ((initial_spaces == 1 or initial_spaces == 3) and
-        not Match(r'\s*\w+\s*:\s*$', cleansed_line)):
+  elif initial_spaces in {1, 3} and not Match(r'\s*\w+\s*:\s*$', cleansed_line):
     error(filename, linenum, 'whitespace/indent', 3,
           'Weird number of spaces at line-start.  '
           'Are you using a 2-space indent?')
-  # Labels should always be indented at least one space.
   elif not initial_spaces and line[:2] != '//' and Search(r'[^:]:\s*$',
                                                           line):
     error(filename, linenum, 'whitespace/labels', 4,
@@ -2854,9 +2850,9 @@ def CheckStyle(filename, clean_lines, linenum, file_extension, nesting_state,
   is_header_guard = False
   if file_extension == 'h':
     cppvar = GetHeaderGuardCPPVariable(filename)
-    if (line.startswith('#ifndef %s' % cppvar) or
-        line.startswith('#define %s' % cppvar) or
-        line.startswith('#endif  // %s' % cppvar)):
+    if (line.startswith(f'#ifndef {cppvar}')
+        or line.startswith(f'#define {cppvar}')
+        or line.startswith(f'#endif  // {cppvar}')):
       is_header_guard = True
   # #include lines and header guards can be long, since there's no clean way to
   # split them.
@@ -2877,15 +2873,11 @@ def CheckStyle(filename, clean_lines, linenum, file_extension, nesting_state,
       error(filename, linenum, 'whitespace/line_length', 2,
             'Lines should be <= 80 characters long')
 
-  if (cleansed_line.count(';') > 1 and
-      # for loops are allowed two ;'s (and may run over two lines).
-      cleansed_line.find('for') == -1 and
-      (GetPreviousNonBlankLine(clean_lines, linenum)[0].find('for') == -1 or
-       GetPreviousNonBlankLine(clean_lines, linenum)[0].find(';') != -1) and
-      # It's ok to have many commands in a switch case that fits in 1 line
-      not ((cleansed_line.find('case ') != -1 or
-            cleansed_line.find('default:') != -1) and
-           cleansed_line.find('break;') != -1)):
+  if (cleansed_line.count(';') > 1 and cleansed_line.find('for') == -1
+      and (GetPreviousNonBlankLine(clean_lines, linenum)[0].find('for') == -1
+           or GetPreviousNonBlankLine(clean_lines, linenum)[0].find(';') != -1)
+      and (cleansed_line.find('case ') == -1 and cleansed_line.find('default:')
+           == -1 or cleansed_line.find('break;') == -1)):
     error(filename, linenum, 'whitespace/newline', 0,
           'More than one command on the same line')
 
@@ -2896,8 +2888,7 @@ def CheckStyle(filename, clean_lines, linenum, file_extension, nesting_state,
   CheckSpacing(filename, clean_lines, linenum, nesting_state, error)
   CheckCheck(filename, clean_lines, linenum, error)
   CheckAltTokens(filename, clean_lines, linenum, error)
-  classinfo = nesting_state.InnermostClass()
-  if classinfo:
+  if classinfo := nesting_state.InnermostClass():
     CheckSectionSpacing(filename, clean_lines, classinfo, linenum, error)
 
 
@@ -2947,12 +2938,9 @@ def _IsTestFilename(filename):
   Returns:
     True if 'filename' looks like a test, False otherwise.
   """
-  if (filename.endswith('_test.cc') or
-      filename.endswith('_unittest.cc') or
-      filename.endswith('_regtest.cc')):
-    return True
-  else:
-    return False
+  return bool(
+      (filename.endswith('_test.cc') or filename.endswith('_unittest.cc')
+       or filename.endswith('_regtest.cc')))
 
 
 def _ClassifyInclude(fileinfo, include, is_system):
@@ -2979,26 +2967,23 @@ def _ClassifyInclude(fileinfo, include, is_system):
     >>> _ClassifyInclude(FileInfo('foo/foo.cc'), 'foo/bar.h', False)
     _OTHER_HEADER
   """
-  # This is a list of all standard c++ header files, except
-  # those already checked for above.
-  is_stl_h = include in _STL_HEADERS
-  is_cpp_h = is_stl_h or include in _CPP_HEADERS
-
   if is_system:
-    if is_cpp_h:
-      return _CPP_SYS_HEADER
-    else:
-      return _C_SYS_HEADER
+    # This is a list of all standard c++ header files, except
+    # those already checked for above.
+    is_stl_h = include in _STL_HEADERS
+    is_cpp_h = is_stl_h or include in _CPP_HEADERS
 
+    return _CPP_SYS_HEADER if is_cpp_h else _C_SYS_HEADER
   # If the target file and the include we're checking share a
   # basename when we drop common extensions, and the include
   # lives in . , then it's likely to be owned by the target file.
   target_dir, target_base = (
       os.path.split(_DropCommonSuffixes(fileinfo.RepositoryName())))
   include_dir, include_base = os.path.split(_DropCommonSuffixes(include))
-  if target_base == include_base and (
-      include_dir == target_dir or
-      include_dir == os.path.normpath(target_dir + '/../public')):
+  if target_base == include_base and include_dir in [
+      target_dir,
+      os.path.normpath(f'{target_dir}/../public'),
+  ]:
     return _LIKELY_MY_HEADER
 
   # If the target and include share some initial basename

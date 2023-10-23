@@ -102,7 +102,7 @@ class TestYaleFacesPreprocessing(StandardTest):
         self.assertIsNone(workflow.thread_pool.failure)
 
         if not os.access(file_name, os.R_OK):
-            raise OSError("File %s not exist" % file_name)
+            raise OSError(f"File {file_name} not exist")
 
 if __name__ == "__main__":
     StandardTest.main()

@@ -70,7 +70,7 @@ class MnistWorkflow(StandardWorkflow):
             if (not isinstance(self.forwards[i], conv.Conv) and
                     not isinstance(self.forwards[i], all2all.All2All)):
                 continue
-            nme = "%s %s" % (i + 1, layers[i]["type"])
+            nme = f'{i + 1} {layers[i]["type"]}'
             self.debug("Added: %s", nme)
             mnist_weights_plotter = nn_plotting_units.Weights2D(
                 self, name=nme, limit=limit)

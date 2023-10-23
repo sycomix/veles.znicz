@@ -466,7 +466,7 @@ class KohonenTrainer(KohonenBase, AcceleratedUnit):
             return result
 
         name = getattr(fn, '__name__', getattr(fn, 'func', wrapped).__name__)
-        wrapped.__name__ = name + '_iteration'
+        wrapped.__name__ = f'{name}_iteration'
         return wrapped
 
     @iteration
@@ -506,11 +506,11 @@ class KohonenTrainer(KohonenBase, AcceleratedUnit):
                             [self.argmin_group_size],
                             self._krn_argmin_)
         self.ocl_consts_[0] = self.gravity_radius
-        self._krn_gravity_.set_arg(2, self.ocl_consts_[0:1])
+        self._krn_gravity_.set_arg(2, self.ocl_consts_[:1])
         self.execute_kernel([batch_size, self._neurons_number], None,
                             self._krn_gravity_)
         self.ocl_consts_[0] = self.gradient_multiplier
-        self._krn_apply_gradient_.set_arg(2, self.ocl_consts_[0:1])
+        self._krn_apply_gradient_.set_arg(2, self.ocl_consts_[:1])
         self.execute_kernel(
             [int(numpy.ceil(self._sample_length / self.device.max_group_size)),
              self.device.max_group_size],
@@ -687,10 +687,14 @@ class KohonenValidator(Unit):
             return
         intersections = []
         for neuron in range(self.neurons_count):
-            for label, members in self.samples_by_label.items():
-                intersections.append((
+            intersections.extend(
+                (
                     len(self.accumulated_input[neuron].intersection(members)),
-                    neuron, self.labels_mapping[label]))
+                    neuron,
+                    self.labels_mapping[label],
+                )
+                for label, members in self.samples_by_label.items()
+            )
         intersections.sort(reverse=True)
         self._reset_result()
         fitted = 0
@@ -713,10 +717,10 @@ class KohonenValidator(Unit):
         assert self._fitness <= 1
         for label, members in self.samples_by_label.items():
             self._fitness_by_label[label] = \
-                fitted_by_label[label] / len(members)
+                    fitted_by_label[label] / len(members)
         for neuron, wins in enumerate(self.accumulated_input):
             self._fitness_by_neuron[neuron] = \
-                fitted_by_neuron[neuron] / len(wins) if len(wins) > 0 else 0
+                    fitted_by_neuron[neuron] / len(wins) if len(wins) > 0 else 0
         self.reset()
         self._need_validate = False
         self.info("Fitness: %.2f", self._fitness)

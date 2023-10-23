@@ -99,7 +99,7 @@ class TestMnistAE(StandardTest):
         file_name = workflow.snapshotter.destination
 
         # Test loading from snapshot
-        self.info("Will load workflow from snapshot: %s" % file_name)
+        self.info(f"Will load workflow from snapshot: {file_name}")
 
         workflow_from_snapshot = SnapshotterToFile.import_(file_name)
         workflow_from_snapshot.workflow = self.parent

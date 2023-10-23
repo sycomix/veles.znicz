@@ -67,8 +67,7 @@ class LMDBLoader(ImageLoader):
     @db_splitted_channels.setter
     def db_splitted_channels(self, value):
         if not isinstance(value, bool):
-            raise TypeError(
-                "db_splitted_channels must be boolean (got %s)" % type(value))
+            raise TypeError(f"db_splitted_channels must be boolean (got {type(value)})")
         self._db_splitted_channels = value
 
     def get_image_label(self, key):

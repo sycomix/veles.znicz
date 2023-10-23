@@ -110,16 +110,15 @@ class Weights2D(plotter.Plotter):
                 sy = get_shape_from.shape[1]
                 if len(get_shape_from.shape) == 4:
                     n_channels = get_shape_from.shape[3]
+        elif len(get_shape_from) == 2:
+            sx = get_shape_from[0]
+            sy = get_shape_from[1]
         else:
-            if len(get_shape_from) == 2:
-                sx = get_shape_from[0]
-                sy = get_shape_from[1]
-            else:
-                sx = get_shape_from[-2]
-                sy = get_shape_from[-3]
-                n_channels = get_shape_from[-1]
-                if isinstance(n_channels, Array):
-                    n_channels = n_channels.shape[-1]
+            sx = get_shape_from[-2]
+            sy = get_shape_from[-3]
+            n_channels = get_shape_from[-1]
+            if isinstance(n_channels, Array):
+                n_channels = n_channels.shape[-1]
         return n_channels, int(sx), int(sy)
 
     def prepare_pics(self, inp, transposed):
@@ -171,8 +170,7 @@ class Weights2D(plotter.Plotter):
                 "data"][0] == a.__array_interface__["data"][0]:
             aa = aa.copy()
         aa -= aa.min()
-        m = aa.max()
-        if m:
+        if m := aa.max():
             m /= 255.0
             aa /= m
         else:
@@ -180,7 +178,7 @@ class Weights2D(plotter.Plotter):
         aa = aa.astype(numpy.uint8)
         if colorspace != "RGB" and len(aa.shape) == 3 and aa.shape[2] == 3:
             import cv2
-            aa = cv2.cvtColor(aa, getattr(cv2, "COLOR_" + colorspace + "2RGB"))
+            aa = cv2.cvtColor(aa, getattr(cv2, f"COLOR_{colorspace}2RGB"))
         return aa
 
     def redraw(self):
@@ -664,13 +662,11 @@ class KohonenNeighborMap(plotter.Plotter):
                 link_values[lvi] = self._calc_link_value(n1, n2)
                 lvi += 1
                 n1 = (x, y)
-                if y & 1:
-                    if x == self.width - 1:
-                        continue
+                if y & 1 and x == self.width - 1 or not y & 1 and x == 0:
+                    continue
+                elif y & 1:
                     n2 = (x + 1, y + 1)
                 else:
-                    if x == 0:
-                        continue
                     n2 = (x - 1, y + 1)
                 if not fast_redraw:
                     self._add_link(axes, links, n1, n2)
@@ -816,7 +812,7 @@ class KohonenValidationResults(KohonenGridBase):
                 axes.texts[0].remove()
 
         # Draw the inner hexagons with text
-        all_patches = [list() for _ in range(len(self.fitness_by_label))]
+        all_patches = [[] for _ in range(len(self.fitness_by_label))]
         hits_max = numpy.max(self.input)
         if hits_max == 0:
             hits_max = 1
@@ -831,7 +827,7 @@ class KohonenValidationResults(KohonenGridBase):
                 fitness = self.fitness_by_neuron[neuron]
                 number = self.input[y * self.width + x]
                 if numpy.sqrt(number / hits_max) <= \
-                   KohonenHits.SIZE_TEXT_THRESHOLD:
+                       KohonenHits.SIZE_TEXT_THRESHOLD:
                     fitness = 0
                 try:
                     label = reversed_result[neuron]

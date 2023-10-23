@@ -118,9 +118,9 @@ class ImageSaver(Unit, TriviallyDistributable):
     def get_list_indices_to_save(self):
         indices_to_save = []
         for image_index in range(self.minibatch_size):
-            true_label = self.labels[image_index]
             if self.max_idx is not None:
                 prediction_label = self.max_idx[image_index]
+                true_label = self.labels[image_index]
                 if prediction_label != true_label:
                     indices_to_save.append(image_index)
             else:
@@ -134,18 +134,19 @@ class ImageSaver(Unit, TriviallyDistributable):
             pass
 
     def remove_old_pictures(self):
-        if self._last_save_time < self.save_time:
-            self._last_save_time = self.save_time
+        if self._last_save_time >= self.save_time:
+            return
+        self._last_save_time = self.save_time
 
-            for i in range(len(self._n_saved)):
-                self._n_saved[i] = 0
-            for dirnme in self.out_dirs:
-                files = glob.glob("%s/*.png" % dirnme)
-                for file in files:
-                    try:
-                        os.unlink(file)
-                    except OSError:
-                        pass
+        for i in range(len(self._n_saved)):
+            self._n_saved[i] = 0
+        for dirnme in self.out_dirs:
+            files = glob.glob(f"{dirnme}/*.png")
+            for file in files:
+                try:
+                    os.unlink(file)
+                except OSError:
+                    pass
 
     def save_image(self, image, path):
         image_to_save = Image.fromarray(image)
@@ -157,7 +158,7 @@ class ImageSaver(Unit, TriviallyDistributable):
                 "array shape for any mode. Image shape: %s"
                 % (path, str(image.shape)))
         except OSError:
-            self.warning("Could not save image to %s" % (path))
+            self.warning(f"Could not save image to {path}")
 
     def normalize_image(self, image, colorspace=None):
         """Normalizes numpy array to interval [0, 255].
@@ -167,8 +168,7 @@ class ImageSaver(Unit, TriviallyDistributable):
                 "data"][0] == image.__array_interface__["data"][0]:
             float_image = float_image.copy()
         float_image -= float_image.min()
-        max_value = float_image.max()
-        if max_value:
+        if max_value := float_image.max():
             max_value /= 255.0
             float_image /= max_value
         else:
@@ -178,7 +178,8 @@ class ImageSaver(Unit, TriviallyDistributable):
                 and normalized_image.shape[2] == 3):
             import cv2
             normalized_image = cv2.cvtColor(
-                normalized_image, getattr(cv2, "COLOR_" + colorspace + "2RGB"))
+                normalized_image, getattr(cv2, f"COLOR_{colorspace}2RGB")
+            )
         return normalized_image
 
     def read_data(self):
@@ -228,9 +229,9 @@ class ImageSaver(Unit, TriviallyDistributable):
                     (self.output, self.target))
 
                 if output_image is None:
-                    assert target_image is None, \
-                        "Output shape is %s while target shape is %s" % (
-                            self.output.shape[1:], target_image.shape)
+                    assert (
+                        target_image is None
+                    ), f"Output shape is {self.output.shape[1:]} while target shape is {target_image.shape}"
                 else:
                     output_image = output_image.reshape(target_image.shape)
                 mse = numpy.linalg.norm(

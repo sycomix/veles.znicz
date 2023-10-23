@@ -114,8 +114,7 @@ class StandardWorkflow(StandardWorkflowBase):
         self.result_unit_factory = kwargs.get("result_unit_factory")
         self.loss_function = kwargs.get("loss_function", None)
         for unit_name in self.CONFIGURABLE_UNIT_NAMES:
-            setattr(self, "%s_name" % unit_name,
-                    kwargs.pop("%s_name" % unit_name, None))
+            setattr(self, f"{unit_name}_name", kwargs.pop(f"{unit_name}_name", None))
 
         self.create_workflow()
 
@@ -126,19 +125,19 @@ class StandardWorkflow(StandardWorkflowBase):
     @loss_function.setter
     def loss_function(self, value):
         if value not in ("softmax", "mse", None):
-            raise ValueError("Unknown loss function type %s" % value)
+            raise ValueError(f"Unknown loss function type {value}")
         self._loss_function = value
 
     def _set_name_of_unit(self, value, name, mapping):
-        value_error = "%s name or loss function must be defined" % name
+        value_error = f"{name} name or loss function must be defined"
         if (value is None and self.loss_function is None and
                 not self.preprocessing):
             raise ValueError(value_error)
-        setattr(self, "_%s_name" % name, value)
+        setattr(self, f"_{name}_name", value)
         if value is None and self.loss_function is not None:
-            setattr(self, "_%s_name" % name, mapping[self.loss_function])
+            setattr(self, f"_{name}_name", mapping[self.loss_function])
         if value is not None:
-            setattr(self, "_%s_name" % name, value)
+            setattr(self, f"_{name}_name", value)
             if self.loss_function is not None:
                 self.warning("Loss function and %s name is defined at the "
                              "same time. %s name has higher priority, then "
@@ -234,20 +233,21 @@ class StandardWorkflow(StandardWorkflowBase):
         self.debug("Constructing the new workflow...")
         if loader_unit_factory is not None:
             assert loader_name is None and loader_config is None
-            wf = StandardWorkflowBase(self.workflow,
-                                      name="Forwards@%s" % self.name,
-                                      loader_factory=loader_unit_factory,
-                                      layers=self.layers)
+            wf = StandardWorkflowBase(
+                self.workflow,
+                name=f"Forwards@{self.name}",
+                loader_factory=loader_unit_factory,
+                layers=self.layers,
+            )
         else:
-            wf = StandardWorkflowBase(self.workflow,
-                                      name="Forwards@%s" % self.name,
-                                      loader_name=loader_name,
-                                      loader_config=loader_config,
-                                      layers=self.layers)
-        if cyclic:
-            start_unit = wf.link_repeater(wf.start_point)
-        else:
-            start_unit = wf.start_point
+            wf = StandardWorkflowBase(
+                self.workflow,
+                name=f"Forwards@{self.name}",
+                loader_name=loader_name,
+                loader_config=loader_config,
+                layers=self.layers,
+            )
+        start_unit = wf.link_repeater(wf.start_point) if cyclic else wf.start_point
         wf.link_loader(start_unit)
         wf.loader.derive_from(self.real_loader)
         if cyclic:
@@ -265,7 +265,7 @@ class StandardWorkflow(StandardWorkflowBase):
         result_unit_config = self.config2kwargs(result_unit_config)
         if result_unit_factory is not None:
             wf.result_unit = result_unit_factory(wf, **result_unit_config) \
-                .link_from(wf.forwards[-1])
+                    .link_from(wf.forwards[-1])
             wf.result_unit.link_attrs(wf.forwards[-1], ("input", "output"))
             wf.result_unit.link_attrs(
                 wf.loader, ("labels_mapping", "reversed_labels_mapping"))
@@ -343,13 +343,12 @@ class StandardWorkflow(StandardWorkflowBase):
             # Link attributes
             if first_gd is not None:
                 unit.link_from(first_gd) \
-                    .link_attrs(first_gd, ("err_output", "err_input"))
+                        .link_attrs(first_gd, ("err_output", "err_input"))
             else:
                 unit.link_from(*parents) \
-                    .link_attrs(self.evaluator, "err_output")
+                        .link_attrs(self.evaluator, "err_output")
             first_gd = unit
 
-            attrs = []
             # TODO(v.markovtsev): add "wants" to Unit and use it here
             try_link_attrs = {"input", "weights", "bias", "input_offset",
                               "mask", "output"}
@@ -357,9 +356,7 @@ class StandardWorkflow(StandardWorkflowBase):
                 try_link_attrs.update(ConvolutionalBase.CONV_ATTRS)
             if isinstance(unit, GDPooling):
                 try_link_attrs.update(GDPooling.POOL_ATTRS)
-            for attr in try_link_attrs:
-                if hasattr(self.forwards[i], attr):
-                    attrs.append(attr)
+            attrs = [attr for attr in try_link_attrs if hasattr(self.forwards[i], attr)]
             unit.link_attrs(self.forwards[i], *attrs)
 
             unit.gate_skip = self.decision.gd_skip
@@ -724,10 +721,11 @@ class StandardWorkflow(StandardWorkflowBase):
         self.conf_matrix_plotters = []
         prev = parents
         for i in range(1, len(self.decision.confusion_matrixes)):
-            mp = plotting_units.MatrixPlotter(
-                self, name=(CLASS_NAME[i] + " matrix")) \
-                .link_attrs(self.decision, ("input", "confusion_matrixes")) \
+            mp = (
+                plotting_units.MatrixPlotter(self, name=f"{CLASS_NAME[i]} matrix")
+                .link_attrs(self.decision, ("input", "confusion_matrixes"))
                 .link_from(*prev)
+            )
             mp.input_field = i
             mp.link_attrs(self.loader, "reversed_labels_mapping")
             mp.gate_skip = ~self.decision.epoch_ended
@@ -800,10 +798,13 @@ class StandardWorkflow(StandardWorkflowBase):
                     not isinstance(self.forwards[i], all2all.All2All) or
                     isinstance(self.forwards[i], all2all.All2AllSoftmax)):
                 continue
-            multi_hist = plotting_units.MultiHistogram(
-                self, name="Histogram #%s: %s" % (index, layer["type"])) \
-                .link_from(*prev).link_attrs(
-                    link_units[i], ("input", weights_input))
+            multi_hist = (
+                plotting_units.MultiHistogram(
+                    self, name=f'Histogram #{index}: {layer["type"]}'
+                )
+                .link_from(*prev)
+                .link_attrs(link_units[i], ("input", weights_input))
+            )
             multi_hist.gate_skip = ~self.decision.epoch_ended
             index += 1
             prev = multi_hist,
@@ -837,7 +838,7 @@ class StandardWorkflow(StandardWorkflowBase):
             parents: units, from whom will be link the first of\
             :class:`veles.znicz.nn_plotting_units.Weights2D` units.
         """
-        name = "weights_plotter_%s" % weights_input
+        name = f"weights_plotter_{weights_input}"
         prev = parents
         setattr(self, name, [])
         prev_channels = 3
@@ -847,11 +848,15 @@ class StandardWorkflow(StandardWorkflowBase):
             if (not isinstance(self.forwards[i], conv.Conv) and
                     not isinstance(self.forwards[i], all2all.All2All)):
                 continue
-            plt_wd = nn_plotting_units.Weights2D(
-                self,
-                name="%s #%s: %s" % (weights_input, index, layer["type"]),
-                **self.config.weights_plotter).link_from(*prev) \
+            plt_wd = (
+                nn_plotting_units.Weights2D(
+                    self,
+                    name=f'{weights_input} #{index}: {layer["type"]}',
+                    **self.config.weights_plotter,
+                )
+                .link_from(*prev)
                 .link_attrs(link_units[i], ("input", weights_input))
+            )
             if isinstance(self.loader, ImageLoader):
                 plt_wd.link_attrs(self.loader, "color_space")
             plt_wd.input_field = "mem"
@@ -904,17 +909,21 @@ class StandardWorkflow(StandardWorkflowBase):
                 k += 1
                 n = i - k
                 continue
-            plt_mx = diversity.SimilarWeights2D(
-                self, name="%s %s [similar]" % (i + 1, layer["type"]),
-                **self.dictify(self.config.similar_weights_plotter)) \
-                .link_attrs(link_units[i], ("input", weights_input)) \
+            plt_mx = (
+                diversity.SimilarWeights2D(
+                    self,
+                    name=f'{i + 1} {layer["type"]} [similar]',
+                    **self.dictify(self.config.similar_weights_plotter),
+                )
+                .link_attrs(link_units[i], ("input", weights_input))
                 .link_from(*prev)
+            )
             plt_mx.gate_skip = ~self.decision.epoch_ended
             plt_mx.input_field = "mem"
             if isinstance(self.loader, ImageLoader):
                 plt_mx.link_attrs(self.loader, "color_space")
-            wd_plt = self.weights_plotter
             if n != 0:
+                wd_plt = self.weights_plotter
                 plt_mx.get_shape_from = wd_plt[n].get_shape_from
             if (layer.get("output_sample_shape") is not None and
                     layer["type"] != "softmax"):
@@ -953,15 +962,15 @@ class StandardWorkflow(StandardWorkflowBase):
                     not isinstance(self.forwards[i], all2all.All2All)):
                 continue
             obj = self.forwards[i].weights
-            name = "weights %s %s" % (i + 1, layer["type"])
+            name = f'weights {i + 1} {layer["type"]}'
             self.table_plotter.y.append(obj)
             self.table_plotter.col_labels.append(name)
             obj = self.gds[i].gradient_weights
-            name = "gd %s %s" % (i + 1, layer["type"])
+            name = f'gd {i + 1} {layer["type"]}'
             self.table_plotter.y.append(obj)
             self.table_plotter.col_labels.append(name)
             obj = self.forwards[i].output
-            name = "Y %s %s" % (i + 1, layer["type"])
+            name = f'Y {i + 1} {layer["type"]}'
             self.table_plotter.y.append(obj)
             self.table_plotter.col_labels.append(name)
         self.table_plotter.link_from(*parents)

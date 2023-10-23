@@ -240,8 +240,7 @@ class Pooling(PoolingBase, nn_units.Forward, TriviallyDistributable):
 
     def run(self):
         t1 = time.time()
-        retval = super(Pooling, self).run()
-        if retval:
+        if retval := super(Pooling, self).run():
             return retval
         self.print_debug_data(t1)
 

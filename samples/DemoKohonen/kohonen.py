@@ -58,11 +58,9 @@ class KohonenLoader(loader.FullBatchLoader):
         try:
             data = numpy.loadtxt(file_name)
         except:
-            raise error.BadFormatError("Could not load data from %s" %
-                                       file_name)
+            raise error.BadFormatError(f"Could not load data from {file_name}")
         if data.shape != (2, 1000):
-            raise error.BadFormatError("Data in %s has the invalid shape" %
-                                       file_name)
+            raise error.BadFormatError(f"Data in {file_name} has the invalid shape")
 
         self.original_data.mem = numpy.zeros((1000, 2), dtype=self.dtype)
         self.original_data.mem[:, 0] = data[0]

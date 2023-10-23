@@ -75,16 +75,15 @@ class _DictSAXHandler(object):
         if i == -1:
             return full_name
         namespace, name = full_name[:i], full_name[i+1:]
-        short_namespace = self.namespaces.get(namespace, namespace)
-        if not short_namespace:
-            return name
-        else:
+        if short_namespace := self.namespaces.get(namespace, namespace):
             return self.namespace_separator.join((short_namespace, name))
+        else:
+            return name
 
     def _attrs_to_dict(self, attrs):
         if isinstance(attrs, dict):
             return attrs
-        return self.dict_constructor(zip(attrs[0::2], attrs[1::2]))
+        return self.dict_constructor(zip(attrs[::2], attrs[1::2]))
 
     def startElement(self, full_name, attrs):
         name = self._build_name(full_name)

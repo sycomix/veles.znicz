@@ -151,8 +151,8 @@ class StandardWorkflowBase(nn_units.NNWorkflow):
     def unlink_unit(self, remove_unit_name):
         if hasattr(self, remove_unit_name):
             self.warning(
-                "Instance %s exists. It will be removed and unlink"
-                % remove_unit_name)
+                f"Instance {remove_unit_name} exists. It will be removed and unlink"
+            )
             remove_unit = getattr(self, remove_unit_name)
             remove_unit.unlink_all()
             self.del_ref(remove_unit)
@@ -160,9 +160,13 @@ class StandardWorkflowBase(nn_units.NNWorkflow):
     def apply_config(self, **kwargs):
         old_config = getattr(self, "config", None)
         self.config = self.WorkflowConfig(
-            **{f: self.config2kwargs(kwargs.pop("%s_config" % f,
-                                                getattr(old_config, f, {})))
-               for f in self.WorkflowConfig._fields})
+            **{
+                f: self.config2kwargs(
+                    kwargs.pop(f"{f}_config", getattr(old_config, f, {}))
+                )
+                for f in self.WorkflowConfig._fields
+            }
+        )
 
     @property
     def mcdnnic_topology(self):
@@ -293,8 +297,7 @@ class StandardWorkflowBase(nn_units.NNWorkflow):
             try:
                 unit = self.layer_map[tpe].forward(self, **kwargs)
             except IndexError:
-                raise from_none(ValueError("Failed to find a Forward in %s" %
-                                           tpe))
+                raise from_none(ValueError(f"Failed to find a Forward in {tpe}"))
             self._add_forward_unit(unit, init_attrs, *parents)
         # Another loop for ZeroFiller unit. Linking attributes for
         # ZeroFiller from attributes of next layer
@@ -304,7 +307,7 @@ class StandardWorkflowBase(nn_units.NNWorkflow):
 
         last_fwd = self.forwards[-1]
         if not isinstance(last_fwd, All2AllSoftmax) and \
-                not isinstance(self.real_loader, LoaderMSEMixin):
+                    not isinstance(self.real_loader, LoaderMSEMixin):
             return last_fwd
 
         def on_initialized():
@@ -408,7 +411,7 @@ class StandardWorkflowBase(nn_units.NNWorkflow):
         if not tpe:
             raise ValueError("layer type must not be an empty string")
         if tpe not in self.layer_map:
-            raise ValueError("Unknown layer type %s" % tpe)
+            raise ValueError(f"Unknown layer type {tpe}")
         kwargs_forward = dict(layer.get("->", {}))
         kwargs_backward = dict(layer.get("<-", {}))
         # Add shared parameters to both dicts
@@ -429,12 +432,12 @@ class StandardWorkflowBase(nn_units.NNWorkflow):
         """
         if len(self.forwards) > 0:
             prev_forward_unit = self.forwards[-1],
-        else:
-            if len(parents) == 0:
-                raise ValueError(
-                    "No parent units were specified for the first forward!")
+        elif parents:
             prev_forward_unit = parents
 
+        else:
+            raise ValueError(
+                "No parent units were specified for the first forward!")
         new_unit.link_from(*prev_forward_unit)
         if isinstance(new_unit, DropoutForward):
             new_unit.link_attrs(self.loader, "minibatch_class")

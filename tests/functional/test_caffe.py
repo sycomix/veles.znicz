@@ -173,7 +173,7 @@ class TestConvCaffe(CaffeTestBase):
         self.info("Veles vs CAFFE data:")
         fwd_conv.output.map_read()
 
-        self.info("Veles top shape:" + str(fwd_conv.output.mem.shape))
+        self.info(f"Veles top shape:{str(fwd_conv.output.mem.shape)}")
         delta_with_veles = fwd_conv.output.mem - top
 
         self.info("CONV: diff with Veles: %.2f%%" % (
@@ -254,7 +254,7 @@ class TestConvCaffe(CaffeTestBase):
         self.info("Veles vs CAFFE data:")
         fwd_conv.output.map_read()
 
-        self.info("Veles top shape:" + str(fwd_conv.output.mem.shape))
+        self.info(f"Veles top shape:{str(fwd_conv.output.mem.shape)}")
         delta_with_veles = fwd_conv.output.mem - top
 
         self.info("CONV: diff with CAFFE: %.2f%%" % (
@@ -315,11 +315,8 @@ class TestConvCaffe(CaffeTestBase):
                 exported from CAFFE (searched in ``self.data_dir_path``)
         """
 
-        # load pooling data from CAFFE dumps
-        in_file = open(os.path.join(self.data_dir_path, data_filename), 'r')
-        lines = in_file.readlines()
-        in_file.close()
-
+        with open(os.path.join(self.data_dir_path, data_filename), 'r') as in_file:
+            lines = in_file.readlines()
         # max pooling: 3x3 kernel, 2x2 stride
         kernel_size = 3
         stride = 2
@@ -779,11 +776,12 @@ class TestConvCaffe(CaffeTestBase):
                                       (n_pics, size, size, n_chans))
         a2a_top = self._read_array("a2a_top", lines, (n_pics, 1, 1, n_classes))
         a2a_weights_raw = self._read_array(
-            "a2a_weights", lines, (n_classes, 1, size * size * n_chans, 1))
+            "a2a_weights", lines, (n_classes, 1, size**2 * n_chans, 1)
+        )
         a2a_weights_raw = a2a_weights_raw.reshape(
             n_classes, n_chans, size, size).swapaxes(1, 2).swapaxes(2, 3)
 
-        a2a_weights = a2a_weights_raw.reshape(n_classes, size * size * n_chans)
+        a2a_weights = a2a_weights_raw.reshape(n_classes, size**2 * n_chans)
 
         a2a_bias_raw = self._read_array("a2a_bias", lines,
                                         (1, 1, n_classes, 1))
@@ -857,7 +855,7 @@ class TestConvCaffe(CaffeTestBase):
         back_a2a_sm.err_input.map_read()
 
         back_percent_delta = \
-            100. * (numpy.sum(numpy.abs(
+                100. * (numpy.sum(numpy.abs(
                 back_a2a_sm.err_input.mem - a2a_bot_err)) /
                 numpy.sum(numpy.abs(a2a_bot_err)))
 
@@ -868,10 +866,7 @@ class TestConvCaffe(CaffeTestBase):
         for pic in range(n_pics):
             for i in range(n_classes):
                 for j in range(n_classes):
-                    if labels[pic] == j:
-                        target = 1
-                    else:
-                        target = 0
+                    target = 1 if labels[pic] == j else 0
                     manual_sm_bot_err[pic, 0, 0, i] += (
                         target / sm_top_err[pic, 0, 0, j] *
                         (sm_top_err[pic, 0, 0, i] * sm_top_err[pic, 0, 0, j]

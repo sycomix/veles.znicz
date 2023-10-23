@@ -430,7 +430,7 @@ class ComplexTest(CaffeTestBase):
                   self._diff(gd_ip_sm.err_input.mem, gd_ip_sm_bot_err))
 
         for name in reversed(names):
-            gd_name = "gd_" + name
+            gd_name = f"gd_{name}"
             gd_elm = self.parent[gd_name]
             gd_bot_err = self._load_blob(
                 name, PropType.backward, WhenTaken.after,

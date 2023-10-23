@@ -124,7 +124,7 @@ def do_plot(fontPath, text, size, angle, sx, sy,
              bitmap.width * bitmap.rows))
         return None
     if image.max() == image.min():
-        logging.info("Font %s returned empty glyph" % (fontPath))
+        logging.info(f"Font {fontPath} returned empty glyph")
         return None
     return image
 
@@ -199,7 +199,7 @@ def fill_tables(d):
             quer += ke
             q += "?"
             params.append(value)
-        quer += ") values (" + q + ")"
+        quer += f") values ({q})"
         d.execute(quer, params)
     d.commit()
     logging.info("done")
@@ -229,7 +229,7 @@ if __name__ == '__main__':
     query = ("select idx, literal from kanji where jlpt >= 2 "
              "order by grade asc, freq desc, jlpt desc, idx asc limit %d"
              % (KANJI_COUNT))
-    rs = db.execute("select count(*) from (%s)" % (query))
+    rs = db.execute(f"select count(*) from ({query})")
     n_kanji = rs.fetchone()[0]
     logging.info("Kanji count: %d" % (n_kanji))
     if n_kanji < 1:
@@ -239,17 +239,14 @@ if __name__ == '__main__':
                                    "kanji/fonts/*"))
     fonts.sort()
 
-    ok = {}
-    for font in fonts:
-        ok[font] = 0
-
+    ok = {font: 0 for font in fonts}
     rs = db.execute(query)
 
     dirnme = os.path.join(root.common.dirs.datasets, "new_kanji/train")
     target_dirnme = os.path.join(root.common.dirs.datasets,
                                  "new_kanji/target")
 
-    logging.info("Be sure that %s and %s are empty" % (dirnme, target_dirnme))
+    logging.info(f"Be sure that {dirnme} and {target_dirnme} are empty")
     logging.info("Will continue in 15 seconds")
     time.sleep(5)
     logging.info("Will continue in 10 seconds")
@@ -263,19 +260,17 @@ if __name__ == '__main__':
     logging.info("Will continue in 1 second")
     time.sleep(1)
 
-    lbl = -1
     n_dups = 0
     sample_number = 0
-    for row in rs:
-        lbl += 1
+    exists = False
+    font_ok = False
+    for lbl, row in enumerate(rs):
         db_idx = row[0]
         character = row[1]
         logging.info("lbl=%d: db_idx=%d %s" % (lbl, db_idx, character))
-        exists = False
-        for font_idx, font in enumerate(fonts):
-            font_ok = False
+        for font in fonts:
             transforms = set()
-            for i in range(0, N_TRANSFORMS):
+            for _ in range(0, N_TRANSFORMS):
                 while True:
                     angle_ = -ANGLE + numpy.random.rand() * (ANGLE * 2)
                     sx_ = SCALE + numpy.random.rand() * (1.0 / SCALE - SCALE)

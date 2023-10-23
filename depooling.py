@@ -99,10 +99,10 @@ class Depooling(nn_units.Forward):
 
     def _gpu_init(self):
         self.build_program(
-            {"INPUT_SIZE": self.input.size}, "%s_%s" %
-            (self.__class__.__name__,
-             "_".join(str(i) for i in self.input.shape)),
-            dtype=self.input.dtype)
+            {"INPUT_SIZE": self.input.size},
+            f'{self.__class__.__name__}_{"_".join(str(i) for i in self.input.shape)}',
+            dtype=self.input.dtype,
+        )
 
         self.assign_kernel("feed_layer")
         self.set_args(self.input, self.output_offset, self.output)

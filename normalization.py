@@ -121,10 +121,11 @@ class LRNormalizerForward(LocalResponseNormalizer, Forward):
                    "N": self.n, "NUM_OF_CHANS": self._num_of_chans,
                    "OUTPUT_SIZE": self.output.size // self._num_of_chans}
 
-        self.build_program(defines, "%s_%s" %
-                           (self.__class__.__name__,
-                            "x".join(str(x) for x in self.input.shape)),
-                           dtype=self.input.dtype)
+        self.build_program(
+            defines,
+            f'{self.__class__.__name__}_{"x".join(str(x) for x in self.input.shape)}',
+            dtype=self.input.dtype,
+        )
         self.assign_kernel("forward")
         self.set_args(self.input, self.output)
 
@@ -201,10 +202,11 @@ class LRNormalizerBackward(LocalResponseNormalizer, GradientDescentBase):
                    "N": self.n, "NUM_OF_CHANS": self._num_of_chans,
                    "OUTPUT_SIZE": self.err_input.size // self._num_of_chans}
 
-        self.build_program(defines, "%s_%s" %
-                           (self.__class__.__name__,
-                            "x".join(str(x) for x in self.err_output.shape)),
-                           dtype=self.input.dtype)
+        self.build_program(
+            defines,
+            f'{self.__class__.__name__}_{"x".join(str(x) for x in self.err_output.shape)}',
+            dtype=self.input.dtype,
+        )
         self.assign_kernel("backward")
         self.set_args(self.err_output, self.input, self.err_input)
 

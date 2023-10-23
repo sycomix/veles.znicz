@@ -74,7 +74,7 @@ class FixAccumulator(Unit):
             self.max = 1.7159
             self.min = -1.7159
         else:
-            raise error.BadFormatError("Unsupported type %s" % self.type)
+            raise error.BadFormatError(f"Unsupported type {self.type}")
 
         d = self.max - self.min
         if not d:
@@ -181,13 +181,12 @@ class RangeAccumulator(Unit):
     def squash_bars(self, x_inp, y_inp):
         if len(x_inp) != len(y_inp):
             raise error.BadFormatError(
-                "Shape of X %s not equal shape of Y %s !" %
-                (len(x_inp), len(y_inp)))
+                f"Shape of X {len(x_inp)} not equal shape of Y {len(y_inp)} !"
+            )
         if len(x_inp) > self.bars:
             segm = int(numpy.ceil(len(x_inp) / self.bars))
             segm_min = int(numpy.floor(len(x_inp) / self.bars))
-            residue = 0 if segm == segm_min else (
-                len(x_inp) - segm * int(len(x_inp) / segm))
+            residue = 0 if segm == segm_min else len(x_inp) - segm * (len(x_inp) // segm)
             if int(numpy.ceil(len(x_inp) / segm)) < self.bars:
                 self.inside_bar = True
                 residue = len(x_inp) - segm_min * int(self.bars / segm_min)

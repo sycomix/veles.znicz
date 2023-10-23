@@ -65,8 +65,7 @@ class ImagenetTestLoader(FileListImageLoader, ImagenetPreprocessingBase):
 
     @Loader.shape.getter
     def shape(self):
-        shape = (self.crop_size_sx, self.crop_size_sy, self.channels)
-        return shape
+        return self.crop_size_sx, self.crop_size_sy, self.channels
 
     def load_mean(self):
         with open(self.matrixes_filename, "rb") as fin:
@@ -90,16 +89,15 @@ class ImagenetTestLoader(FileListImageLoader, ImagenetPreprocessingBase):
         size, color = self.get_image_info(key)
 
         if color != self.color_space:
-            method = getattr(
-                cv2, "COLOR_%s2%s" % (color, self.color_space), None)
+            method = getattr(cv2, f"COLOR_{color}2{self.color_space}", None)
             if method is None:
-                aux_method = getattr(cv2, "COLOR_%s2BGR" % color)
+                aux_method = getattr(cv2, f"COLOR_{color}2BGR")
                 try:
                     data = cv2.cvtColor(data, aux_method)
                 except cv2.error as e:
                     raise AttributeError(
                         "Failed to perform '%s' conversion", aux_method)
-                method = getattr(cv2, "COLOR_BGR2%s" % self.color_space)
+                method = getattr(cv2, f"COLOR_BGR2{self.color_space}")
             try:
                 data = cv2.cvtColor(data, method)
             except cv2.error as e:
@@ -221,9 +219,8 @@ if __name__ == "__main__":
         font = cv2.FONT_HERSHEY_DUPLEX
 
         name_image = os.path.basename(path_to_original).split(".")[0]
-        new_path = os.path.join(
-            path_to_labeled_frames, name_image + "_%s" % label + ".png")
-        print("Saved image to %s" % new_path)
+        new_path = os.path.join(path_to_labeled_frames, f"{name_image}_{label}.png")
+        print(f"Saved image to {new_path}")
         cv2.imwrite(new_path, image)
 
     out_file = os.path.join(data_path, "result.txt")

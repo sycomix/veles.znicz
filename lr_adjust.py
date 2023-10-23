@@ -269,12 +269,8 @@ class ArbitraryStepPolicy(PolicyBase):
         base_lr = kwargs.get("base_lr", lr_to_adjust)
         lrs_with_lengths = kwargs["lrs_with_lengths"]
         assert lrs_with_lengths is not None
-        self.x_array = []
-        self.y_array = []
-
-        self.x_array.append(-1)
-        self.y_array.append(base_lr * lrs_with_lengths[0][0])
-
+        self.x_array = [-1]
+        self.y_array = [base_lr * lrs_with_lengths[0][0]]
         cur_iter = 0
 
         for coeff, length in lrs_with_lengths:
